@@ -12,6 +12,7 @@ import StorePage from "@/pages/StorePage";
 import ContactPage from "@/pages/ContactPage";
 import AdminPage from "@/pages/AdminPage";
 import MemberLoginPage from "@/pages/MemberLoginPage";
+import NewsPage from "@/pages/NewsPage";
 import NotFound from "@/pages/NotFound";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
