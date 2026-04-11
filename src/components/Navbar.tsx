@@ -8,7 +8,7 @@ const navLinks = [
   { label: "Membership", path: "/membership" },
   { label: "Publications", path: "/publications" },
   { label: "Store", path: "/store" },
-  { label: "News", path: "/" },
+  { label: "News", path: "/news" },
   { label: "Contact", path: "/contact" },
   { label: "Member Login", path: "/member-login" },
 ];
@@ -23,7 +23,6 @@ export default function Navbar() {
         <img src={logo} alt="NASMED" className="w-[52px] h-[52px] rounded-full object-cover border-2 border-white/25 bg-white p-0.5" />
         <div className="flex flex-col leading-none">
           <strong className="text-white text-[15px] font-bold tracking-wide">NASMED</strong>
-          <span className="text-white/50 text-[10px] tracking-[1.5px] uppercase mt-0.5">Nigeria Association of Sports Medicine</span>
         </div>
       </Link>
 
