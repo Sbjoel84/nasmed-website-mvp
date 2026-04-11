@@ -15,7 +15,6 @@ export default function Footer() {
             <img src={logo} alt="NASMED" className="w-14 h-14 rounded-full object-cover border-2 border-white/20 bg-white p-0.5" />
             <div>
               <strong className="text-white text-base font-bold block">NASMED</strong>
-              <span className="text-white/45 text-[10px] tracking-[1.5px] uppercase">Nigeria Association of Sports Medicine</span>
             </div>
           </div>
           <p className="text-sm leading-relaxed mb-5">Promoting excellence in sports and exercise medicine across Nigeria and Africa since 1988. <em>Mens sana in corpore sano.</em></p>
