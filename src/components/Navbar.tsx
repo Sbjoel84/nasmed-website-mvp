@@ -8,7 +8,7 @@ const navLinks = [
   { label: "Membership", path: "/membership" },
   { label: "Publications", path: "/publications" },
   { label: "Store", path: "/store" },
-  { label: "News", path: "/" },
+  { label: "News", path: "/news" },
   { label: "Contact", path: "/contact" },
   { label: "Member Login", path: "/member-login" },
 ];
