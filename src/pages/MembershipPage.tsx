@@ -20,14 +20,36 @@ const benefits = [
   { icon: "🏅", title: "Recognition & Awards", desc: "Get recognised for your contributions through award programmes and public acknowledgements.", tags: ["Awards", "Recognition", "Profile"], gradient: "from-emerald-800 to-emerald-600" },
 ];
 
+const membershipPlans = [
+  { tier: "Associate Member", tag: "STANDARD", price: "₦15,000", period: "/year", features: ["Member directory listing", "Newsletter access", "Annual conference discount", "Digital membership card"], featured: false },
+  { tier: "Professional Member", tag: "MOST POPULAR", price: "₦45,000", period: "/year", features: ["All Associate benefits", "Full journal access", "CPD programme access", "Research database access", "Voting rights"], featured: true },
+  { tier: "Fellow (FNASMED)", tag: "PREMIUM", price: "₦80,000", period: "/year", features: ["All Professional benefits", "FNASMED designation", "Leadership eligibility", "International liaison", "Priority event access", "Mentorship programme"], featured: false },
+];
+
 export default function MembershipPage() {
-  const [step, setStep] = useState(1);
+  const [searchParams] = useSearchParams();
+  const [step, setStep] = useState(0); // 0 = plan selection
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
     ref1Name: "", ref1Email: "", ref1Mobile: "",
     ref2Name: "", ref2Email: "", ref2Mobile: "",
     statement: "", agreed: false,
   });
+
+  useEffect(() => {
+    const plan = searchParams.get("plan");
+    if (plan) {
+      setFormData(prev => ({ ...prev, category: plan }));
+      setStep(1);
+      setTimeout(() => document.getElementById('app-form')?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, [searchParams]);
+
+  const selectPlan = (tier: string) => {
+    setFormData(prev => ({ ...prev, category: tier }));
+    setStep(1);
+    setTimeout(() => document.getElementById('app-form')?.scrollIntoView({ behavior: 'smooth' }), 100);
+  };
 
   const updateField = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
