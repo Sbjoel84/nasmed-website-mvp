@@ -1,11 +1,15 @@
 import PageHeader from "@/components/PageHeader";
 import aboutImg from "@/assets/about-img.jpg";
+import leaderPresident from "@/assets/leader-president.jpg";
+import leaderFunke from "@/assets/leader-funke.jpg";
+import leaderChukwuemeka from "@/assets/leader-chukwuemeka.jpg";
+import leaderTunde from "@/assets/leader-tunde.jpg";
 
 const leaders = [
-  { name: "Dr. Olajide Adebola", role: "President", bio: "Sports Medicine Physician and President of NASMED, championing athlete health and professional excellence across Nigeria." },
-  { name: "Dr. Funke Bakare", role: "Vice President", bio: "Distinguished sports medicine practitioner and NASMED Vice President, committed to advancing women in sports health." },
-  { name: "Dr. Chukwuemeka Eze", role: "Secretary General", bio: "Sports Physician and Secretary General overseeing NASMED's national secretariat and inter-state coordination." },
-  { name: "Dr. Tunde Oyelaran", role: "Director of Research", bio: "Orthopaedic Surgeon and Research Director spearheading evidence-based publications and academic programmes." },
+  { name: "Dr. Olajide Adebola", role: "President", bio: "Sports Medicine Physician and President of NASMED, championing athlete health and professional excellence across Nigeria.", image: leaderPresident },
+  { name: "Dr. Funke Bakare", role: "Vice President", bio: "Distinguished sports medicine practitioner and NASMED Vice President, committed to advancing women in sports health.", image: leaderFunke },
+  { name: "Dr. Chukwuemeka Eze", role: "Secretary General", bio: "Sports Physician and Secretary General overseeing NASMED's national secretariat and inter-state coordination.", image: leaderChukwuemeka },
+  { name: "Dr. Tunde Oyelaran", role: "Director of Research", bio: "Orthopaedic Surgeon and Research Director spearheading evidence-based publications and academic programmes.", image: leaderTunde },
 ];
 
 const missionCards = [
@@ -207,8 +211,8 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {leaders.map(l => (
               <div key={l.name} className="rounded-[14px] overflow-hidden border-[1.5px] border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1 hover:border-nasmed-mid-blue">
-                <div className="w-full aspect-square bg-gradient-to-br from-nasmed-blue to-nasmed-mid-blue flex items-center justify-center font-heading text-4xl font-bold text-white/40">
-                  {l.name.split(' ').map(n => n[0]).join('')}
+                <div className="w-full aspect-square overflow-hidden">
+                  <img src={l.image} alt={l.name} className="w-full h-full object-cover" loading="lazy" />
                 </div>
                 <div className="p-4">
                   <div className="font-bold text-sm text-nasmed-navy mb-1">{l.name}</div>
