@@ -33,18 +33,29 @@ export default function Navbar() {
 
       {/* Links */}
       <ul className={`${menuOpen ? "flex" : "hidden"} md:flex flex-col md:flex-row absolute md:static top-full left-0 right-0 bg-nasmed-navy md:bg-transparent items-center gap-1 md:gap-6 list-none p-4 md:p-0`}>
-        {navLinks.map((link) => (
-          <li key={link.label}>
-            <Link
-              to={link.path}
-              onClick={() => setMenuOpen(false)}
-              className={`text-white/80 no-underline text-[13.5px] font-medium tracking-wide transition-colors hover:text-white relative block py-2 md:py-0
-                ${pathname === link.path ? "text-white" : ""}`}
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
+        {navLinks.map((link) => {
+          const isActive = pathname === link.path;
+          return (
+            <li key={link.label}>
+              <Link
+                to={link.path}
+                onClick={() => setMenuOpen(false)}
+                className={`text-white/80 no-underline text-[13.5px] font-medium tracking-wide transition-colors hover:text-white relative block py-2 md:py-1 group
+                  ${isActive ? "!text-white" : ""}`}
+              >
+                {link.label}
+                {/* Active white underline */}
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white rounded-full" />
+                )}
+                {/* Hover green underline - animated from left */}
+                {!isActive && (
+                  <span className="absolute bottom-0 left-0 h-[2px] bg-nasmed-green rounded-full w-0 group-hover:w-full transition-all duration-300 ease-out" />
+                )}
+              </Link>
+            </li>
+          );
+        })}
         <li>
           <Link to="/membership" onClick={() => setMenuOpen(false)} className="bg-nasmed-green text-white border-none py-2 px-5 rounded-md text-[13px] font-semibold no-underline transition-all hover:bg-nasmed-green-light hover:-translate-y-px">
             Join NASMED
