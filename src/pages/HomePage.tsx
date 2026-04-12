@@ -140,40 +140,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* MEMBERSHIP PREVIEW */}
-      <section className="py-20 px-6 md:px-12 max-w-[1280px] mx-auto">
+      {/* MEMBERSHIP CTA */}
+      <section className="py-20 px-6 md:px-12 max-w-[1280px] mx-auto text-center">
         <div className="section-label">Membership</div>
         <h2 className="section-title">Join the NASMED Community</h2>
         <p className="section-sub">Choose a membership tier that matches your professional profile and career goals.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { tier: "Associate Member", tag: "STANDARD", price: "₦15,000", period: "/year", features: ["Member directory listing", "Newsletter access", "Annual conference discount", "Digital membership card"], featured: false },
-            { tier: "Professional Member", tag: "MOST POPULAR", price: "₦45,000", period: "/year", features: ["All Associate benefits", "Full journal access", "CPD programme access", "Research database access", "Voting rights"], featured: true },
-            { tier: "Fellow (FNASMED)", tag: "PREMIUM", price: "₦80,000", period: "/year", features: ["All Professional benefits", "FNASMED designation", "Leadership eligibility", "International liaison", "Priority event access", "Mentorship programme"], featured: false },
-          ].map((card) => (
-            <div key={card.tier} className={`rounded-2xl p-8 relative overflow-hidden transition-all border-[1.5px] ${card.featured ? "bg-nasmed-navy text-white border-nasmed-mid-blue shadow-[0_20px_56px_rgba(26,58,110,0.3)]" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:shadow-xl hover:-translate-y-1"}`}>
-              <div className={`absolute top-0 left-0 right-0 h-1 ${card.featured ? "bg-gradient-to-r from-nasmed-green to-nasmed-mid-blue" : card.tag === "STANDARD" ? "bg-nasmed-gray" : "bg-nasmed-mid-blue"}`} />
-              <span className={`text-[10px] font-bold tracking-[2px] uppercase py-1 px-2.5 rounded inline-block mb-4 ${card.featured ? "bg-nasmed-green/25 text-nasmed-green-light" : "bg-nasmed-gray-light text-nasmed-text-muted"}`}>{card.tag}</span>
-              <h3 className={`font-heading text-[22px] font-bold mb-2 ${card.featured ? "text-white" : ""}`}>{card.tier}</h3>
-              <div className={`text-[34px] font-bold my-2.5 ${card.featured ? "text-nasmed-green-light" : ""}`}>
-                {card.price}<span className="text-[13px] font-normal opacity-60">{card.period}</span>
-              </div>
-              <ul className="list-none mb-7 flex flex-col gap-2.5">
-                {card.features.map((f) => (
-                  <li key={f} className={`flex items-center gap-2.5 text-[13px] ${card.featured ? "text-white/75" : "text-nasmed-text-muted"}`}>
-                    <span className="text-nasmed-green-light font-bold text-xs">✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                to="/membership"
-                className={`block text-center py-3 rounded-lg font-semibold text-[13px] no-underline transition-all border-2 ${card.featured ? "bg-nasmed-green border-nasmed-green text-white hover:bg-nasmed-green-light hover:border-nasmed-green-light" : "border-nasmed-gray-light text-nasmed-navy hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue"}`}
-              >
-                {card.featured ? "Get Started →" : "Learn More"}
-              </Link>
-            </div>
-          ))}
-        </div>
+        <Link to="/membership" className="btn-primary inline-block mt-4">View Plans & Register →</Link>
       </section>
 
       {/* NEWS */}
