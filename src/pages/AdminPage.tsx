@@ -3,13 +3,76 @@ import { toast } from "sonner";
 import logo from "@/assets/nasmed-logo.png";
 
 const DEMO_APPS = [
-  { id: "APP-001", name: "Dr. Adamu Yusuf", email: "adamu@email.com", prof: "Sports Physician", tier: "Professional Member", state: "Abuja (FCT)", date: "15/03/2024", status: "pending" },
-  { id: "APP-002", name: "Dr. Folake Ojo", email: "folake@email.com", prof: "Physiotherapist", tier: "Associate Member", state: "Lagos", date: "12/03/2024", status: "pending" },
-  { id: "APP-003", name: "Dr. Emeka Chukwu", email: "emeka@email.com", prof: "Exercise Physiologist", tier: "Fellow (FNASMED)", state: "Enugu", date: "10/03/2024", status: "approved" },
-  { id: "APP-004", name: "Dr. Hassan Ibrahim", email: "hassan@email.com", prof: "Sports Surgeon", tier: "Professional Member", state: "Kano", date: "08/03/2024", status: "approved" },
-  { id: "APP-005", name: "Dr. Ngozi Obi", email: "ngozi@email.com", prof: "Nutritionist", tier: "Associate Member", state: "Rivers", date: "05/03/2024", status: "rejected" },
-  { id: "APP-006", name: "Dr. Aisha Mohammed", email: "aisha@email.com", prof: "Sports Psychologist", tier: "Professional Member", state: "Kaduna", date: "01/03/2024", status: "pending" },
-  { id: "APP-007", name: "Dr. Biodun Akintola", email: "biodun@email.com", prof: "Physiotherapist", tier: "Associate Member", state: "Oyo", date: "28/02/2024", status: "pending" },
+  {
+    id: "APP-001", name: "Dr. Chike Okafor", email: "chike.okafor@gmail.com", prof: "Sports Physician",
+    tier: "Professional Member", state: "Lagos", date: "28/06/2024", status: "pending",
+    phone: "+234 803 456 7890", altEmail: "—", qualifications: "MBBS, MSc Sports Medicine",
+    workplace: "Lagos University Teaching Hospital",
+    referee1: { name: "Prof. O. Makanju", email: "makanju@unilag.edu.ng", mobile: "+234 802 111 2222" },
+    referee2: { name: "Dr. B.O. Onabowale", email: "onabowale@nasmed.ng", mobile: "+234 803 333 4444" },
+    statement: "I am a dedicated sports medicine physician with over eight years of clinical experience in managing musculoskeletal injuries, sports-related concussions, and performance optimisation for elite and recreational athletes across Nigeria. My interest in joining NASMED stems from a desire to contribute to the professionalisation of sports medicine practice in Nigeria and to benefit from the rich network of colleagues who share the same commitment to athlete welfare. I have completed my MBBS at the University of Lagos and subsequently obtained an MSc in Sports Medicine from the University of Bath, UK. I am committed to upholding the highest ethical standards and to contributing actively to NASMED's research and continuing professional development programmes.",
+    payment: "Paid", submitted: "28 Jun 2024",
+  },
+  {
+    id: "APP-002", name: "Mrs. Abiodun Salami", email: "abiodun.salami@email.com", prof: "Physiotherapist",
+    tier: "Associate Member", state: "Lagos", date: "20/06/2024", status: "pending",
+    phone: "+234 806 222 3344", altEmail: "salami_abio@yahoo.com", qualifications: "BSc Physiotherapy",
+    workplace: "National Orthopaedic Hospital, Lagos",
+    referee1: { name: "Dr. I. Taiwo", email: "i.taiwo@luth.edu.ng", mobile: "+234 801 555 6677" },
+    referee2: { name: "Dr. S. Eze", email: "s.eze@nasmed.ng", mobile: "+234 805 888 9900" },
+    statement: "As a physiotherapist specialising in sports rehabilitation, I have worked extensively with Nigerian football clubs and track-and-field athletes. I believe NASMED membership will enhance my professional credibility and give me access to evidence-based resources that directly improve patient outcomes.",
+    payment: "Paid", submitted: "20 Jun 2024",
+  },
+  {
+    id: "APP-003", name: "Dr. Ezekiel Adeyemi", email: "ezekiel@email.com", prof: "Exercise Physiologist",
+    tier: "Fellow (FNASMED)", state: "Enugu", date: "10/06/2024", status: "approved",
+    phone: "+234 803 777 8888", altEmail: "—", qualifications: "MBBS, PhD Exercise Physiology",
+    workplace: "University of Nigeria Teaching Hospital",
+    referee1: { name: "Prof. C. Obiora", email: "c.obiora@unth.edu.ng", mobile: "+234 803 100 2000" },
+    referee2: { name: "Dr. A. Nwosu", email: "a.nwosu@nasmed.ng", mobile: "+234 807 300 4000" },
+    statement: "With a PhD in Exercise Physiology and over 15 years of research and clinical practice, I seek fellowship status to contribute to NASMED's academic leadership and mentor the next generation of sports medicine professionals in South-East Nigeria.",
+    payment: "Paid", submitted: "10 Jun 2024",
+  },
+  {
+    id: "APP-004", name: "Dr. Fatima Garba", email: "fatima@email.com", prof: "Sports Surgeon",
+    tier: "Professional Member", state: "Kano", date: "08/06/2024", status: "approved",
+    phone: "+234 811 444 5555", altEmail: "fatima.garba@kth.ng", qualifications: "MBBS, FWACS (Surgery)",
+    workplace: "Kano Teaching Hospital",
+    referee1: { name: "Prof. M. Dankama", email: "m.dankama@kth.edu.ng", mobile: "+234 811 600 7000" },
+    referee2: { name: "Dr. Y. Aliyu", email: "y.aliyu@nasmed.ng", mobile: "+234 812 800 9000" },
+    statement: "As a Fellow of the West African College of Surgeons with a subspecialty in orthopaedic sports surgery, I look forward to contributing my surgical expertise to NASMED's multidisciplinary approach to athlete care in Northern Nigeria.",
+    payment: "Paid", submitted: "08 Jun 2024",
+  },
+  {
+    id: "APP-005", name: "Mr. Seun Badmos", email: "seun@email.com", prof: "Nutritionist",
+    tier: "Associate Member", state: "Rivers", date: "05/06/2024", status: "rejected",
+    phone: "+234 704 123 4567", altEmail: "—", qualifications: "BSc Nutrition and Dietetics",
+    workplace: "Port Harcourt Sports Commission",
+    referee1: { name: "Dr. T. Amadi", email: "t.amadi@uniph.edu.ng", mobile: "+234 703 111 2222" },
+    referee2: { name: "Dr. C. Nwachukwu", email: "c.nwachukwu@nasmed.ng", mobile: "+234 701 333 4444" },
+    statement: "I am a sports nutritionist working with the Rivers State athletics team. I wish to join NASMED to formally align my practice with sports medicine standards and gain access to structured CPD opportunities.",
+    payment: "Paid", submitted: "05 Jun 2024",
+  },
+  {
+    id: "APP-006", name: "Dr. Halima Musa", email: "halima@email.com", prof: "Sports Psychologist",
+    tier: "Professional Member", state: "Kaduna", date: "01/06/2024", status: "pending",
+    phone: "+234 809 888 7766", altEmail: "halima.musa@ahms.edu.ng", qualifications: "MBBS, MSc Sports Psychology",
+    workplace: "Ahmadu Bello University Medical Centre",
+    referee1: { name: "Prof. D. Lawal", email: "d.lawal@abu.edu.ng", mobile: "+234 808 200 3000" },
+    referee2: { name: "Dr. K. Abubakar", email: "k.abubakar@nasmed.ng", mobile: "+234 809 400 5000" },
+    statement: "My work at ABU Medical Centre focuses on the psychological readiness and mental resilience of elite athletes. Joining NASMED as a Professional Member will allow me to collaborate with colleagues across disciplines to deliver truly holistic athlete care.",
+    payment: "Paid", submitted: "01 Jun 2024",
+  },
+  {
+    id: "APP-007", name: "Dr. Tunde Olawale", email: "tunde@email.com", prof: "Physiotherapist",
+    tier: "Associate Member", state: "Oyo", date: "28/05/2024", status: "pending",
+    phone: "+234 812 555 6677", altEmail: "—", qualifications: "BSc, MSc Physiotherapy",
+    workplace: "University College Hospital, Ibadan",
+    referee1: { name: "Dr. O. Adeleke", email: "o.adeleke@uch.edu.ng", mobile: "+234 811 700 8000" },
+    referee2: { name: "Dr. F. Oguntunde", email: "f.oguntunde@nasmed.ng", mobile: "+234 815 900 1000" },
+    statement: "Working in one of Nigeria's foremost teaching hospitals, I have developed a strong foundation in sports rehabilitation. NASMED membership will help me formalise my sports medicine pathway and contribute to the growing community of practitioners in South-West Nigeria.",
+    payment: "Pending", submitted: "28 May 2024",
+  },
 ];
 
 const DEMO_MEMBERS_INIT = [
@@ -32,6 +95,8 @@ const nigerianStates = [
   "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
+type App = typeof DEMO_APPS[0];
+
 export default function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState("admin");
@@ -43,6 +108,9 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [totalMembers, setTotalMembers] = useState(1412);
 
+  // View application modal
+  const [viewApp, setViewApp] = useState<App | null>(null);
+
   // Add member form
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
@@ -53,17 +121,14 @@ export default function AdminPage() {
   const [afState, setAfState] = useState("");
 
   const handleLogin = () => {
-    if (user === "admin" && pass === "nasmed2024") {
-      setLoggedIn(true);
-      setLoginErr(false);
-    } else {
-      setLoginErr(true);
-    }
+    if (user === "admin" && pass === "nasmed2024") { setLoggedIn(true); setLoginErr(false); }
+    else setLoginErr(true);
   };
 
   const handleAction = (id: string, action: string) => {
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: action === "approve" ? "approved" : "rejected" } : a));
-    toast.success(action === "approve" ? "Application approved!" : "Application rejected.");
+    if (viewApp?.id === id) setViewApp(prev => prev ? { ...prev, status: action === "approve" ? "approved" : "rejected" } : null);
+    toast.success(action === "approve" ? "Application approved & member notified!" : "Application rejected & member notified.");
   };
 
   const addMember = () => {
@@ -74,12 +139,9 @@ export default function AdminPage() {
       username: (afFname + "." + afLname).toLowerCase(),
       password: "nasmed2024",
       prof: afProf || "Professional",
-      tier: afTier,
-      state: afState,
+      tier: afTier, state: afState,
       joined: new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
-      status: "active",
-      position: "",
-      mustChange: true,
+      status: "active", position: "", mustChange: true,
     };
     setMembers(prev => [m, ...prev]);
     setTotalMembers(prev => prev + 1);
@@ -94,7 +156,7 @@ export default function AdminPage() {
       rejected: "bg-red-500/15 text-red-600",
       active: "bg-nasmed-mid-blue/10 text-nasmed-mid-blue",
     };
-    return <span className={`py-1 px-2.5 rounded-full text-[11px] font-bold tracking-wide ${map[s] || ""}`}>{s}</span>;
+    return <span className={`py-1 px-2.5 rounded-full text-[11px] font-bold tracking-wide capitalize ${map[s] || ""}`}>{s}</span>;
   };
 
   if (!loggedIn) {
@@ -114,7 +176,7 @@ export default function AdminPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[13px] font-semibold text-nasmed-navy">Password</label>
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" onKeyDown={e => e.key === "Enter" && handleLogin()} />
             </div>
             <button onClick={handleLogin} className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full">Sign In →</button>
           </div>
@@ -142,9 +204,17 @@ export default function AdminPage() {
     return rows.filter(r => keys.some(k => String(r[k] || "").toLowerCase().includes(s)));
   };
 
+  const field = (label: string, value: string) => (
+    <div className="flex flex-col gap-1 p-4 border border-nasmed-gray-light rounded-lg bg-nasmed-off-white/40">
+      <span className="text-[10px] font-bold tracking-[1.5px] uppercase text-nasmed-text-muted">{label}</span>
+      <span className="text-[14px] font-medium text-nasmed-navy">{value || "—"}</span>
+    </div>
+  );
+
   return (
     <div className="pt-[78px] bg-nasmed-off-white min-h-screen">
       <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[calc(100vh-78px)]">
+
         {/* Sidebar */}
         <div className="bg-nasmed-navy py-7 hidden md:block">
           <div className="px-6 pb-6 border-b border-white/10">
@@ -156,8 +226,7 @@ export default function AdminPage() {
               <li key={item.key}>
                 <button
                   onClick={() => { setActiveSection(item.key); setSearch(""); }}
-                  className={`w-full flex items-center gap-2.5 py-2.5 px-6 text-[13.5px] font-medium cursor-pointer transition-all border-none bg-transparent text-left
-                    ${activeSection === item.key ? "bg-white/10 text-white border-l-[3px] border-nasmed-green-light" : "text-white/65 hover:bg-white/5 hover:text-white"}`}
+                  className={`w-full flex items-center gap-2.5 py-2.5 px-6 text-[13.5px] font-medium cursor-pointer transition-all border-none bg-transparent text-left ${activeSection === item.key ? "bg-white/10 text-white border-l-[3px] border-nasmed-green-light" : "text-white/65 hover:bg-white/5 hover:text-white"}`}
                 >
                   <span className="text-base w-5 text-center">{item.icon}</span>{item.label}
                 </button>
@@ -173,6 +242,8 @@ export default function AdminPage() {
 
         {/* Content */}
         <div className="p-6 md:p-9">
+
+          {/* ── Dashboard ── */}
           {activeSection === "dashboard" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Dashboard Overview</h2>
@@ -198,7 +269,7 @@ export default function AdminPage() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead><tr>{["Name", "Type", "Date", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3.5 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                    <thead><tr>{["Name", "Type", "Date", "Status"].map(h => <th key={h} className="text-left py-2.5 px-3.5 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
                       {filterRows(applications.slice(0, 5), ["name", "tier"]).map(a => (
                         <tr key={a.id} className="hover:bg-nasmed-off-white">
@@ -206,14 +277,6 @@ export default function AdminPage() {
                           <td className="py-3 px-3.5 text-[13px]">{a.tier}</td>
                           <td className="py-3 px-3.5 text-[13px]">{a.date}</td>
                           <td className="py-3 px-3.5">{statusBadge(a.status)}</td>
-                          <td className="py-3 px-3.5">
-                            {a.status === "pending" && (
-                              <div className="flex gap-1.5">
-                                <button onClick={() => handleAction(a.id, "approve")} className="bg-nasmed-green text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light">✓ Approve</button>
-                                <button onClick={() => handleAction(a.id, "reject")} className="bg-red-500 text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">✗ Reject</button>
-                              </div>
-                            )}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -223,6 +286,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {/* ── Applications ── */}
           {activeSection === "applications" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Membership Applications</h2>
@@ -246,12 +310,13 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-[13px]">{a.date}</td>
                           <td className="py-3 px-3">{statusBadge(a.status)}</td>
                           <td className="py-3 px-3">
-                            {a.status === "pending" && (
-                              <div className="flex gap-1.5">
-                                <button onClick={() => handleAction(a.id, "approve")} className="bg-nasmed-green text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light">✓</button>
-                                <button onClick={() => handleAction(a.id, "reject")} className="bg-red-500 text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">✗</button>
-                              </div>
-                            )}
+                            <div className="flex gap-1.5 items-center">
+                              <button onClick={() => setViewApp(a)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
+                              {a.status === "pending" && <>
+                                <button onClick={() => handleAction(a.id, "approve")} className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light">✓</button>
+                                <button onClick={() => handleAction(a.id, "reject")} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">✗</button>
+                              </>}
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -262,6 +327,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {/* ── Members ── */}
           {activeSection === "members" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Active Members</h2>
@@ -285,7 +351,7 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-[13px]">{m.joined}</td>
                           <td className="py-3 px-3">{statusBadge(m.status)}</td>
                           <td className="py-3 px-3">
-                            <button onClick={() => toast.info(`Member profile: ${m.name}`)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:bg-accent">View</button>
+                            <button onClick={() => toast.info(`Member profile: ${m.name}`)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
                           </td>
                         </tr>
                       ))}
@@ -296,6 +362,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {/* ── Renewals ── */}
           {activeSection === "renewals" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Membership Renewals</h2>
@@ -328,6 +395,7 @@ export default function AdminPage() {
             </>
           )}
 
+          {/* ── Add Member ── */}
           {activeSection === "addmember" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Register New Member</h2>
@@ -370,13 +438,12 @@ export default function AdminPage() {
                     </select>
                   </div>
                 </div>
-                <button onClick={addMember} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-6">
-                  Register Member →
-                </button>
+                <button onClick={addMember} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-6">Register Member →</button>
               </div>
             </>
           )}
 
+          {/* ── Settings / Credentials ── */}
           {activeSection === "credentials" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Member Credentials</h2>
@@ -405,6 +472,151 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* ══════════════════════════════════════════════════
+          APPLICATION REVIEW MODAL
+      ══════════════════════════════════════════════════ */}
+      {viewApp && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[3000] flex items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setViewApp(null); }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-[760px] max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+
+            {/* ── Modal Header ── */}
+            <div className="flex items-center justify-between px-7 py-5 border-b border-nasmed-gray-light flex-shrink-0">
+              <h2 className="font-heading text-nasmed-navy text-[17px] font-bold leading-snug">
+                Application Review — {viewApp.name} — Full Application Review
+              </h2>
+              <button onClick={() => setViewApp(null)} className="w-8 h-8 rounded-full border border-nasmed-gray-light bg-white text-nasmed-text-muted flex items-center justify-center text-lg cursor-pointer hover:bg-nasmed-off-white transition-all flex-shrink-0 ml-4">✕</button>
+            </div>
+
+            {/* ── Status bar ── */}
+            <div className="flex items-center justify-between px-7 py-3.5 border-b border-nasmed-gray-light bg-nasmed-off-white/60 flex-shrink-0 flex-wrap gap-3">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className={`flex items-center gap-1.5 py-1 px-3 rounded-full text-[12px] font-bold border ${
+                  viewApp.status === "pending" ? "border-amber-400 text-amber-600 bg-amber-50" :
+                  viewApp.status === "approved" ? "border-nasmed-green text-nasmed-green bg-nasmed-green/5" :
+                  "border-red-400 text-red-600 bg-red-50"
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${viewApp.status === "pending" ? "bg-amber-500" : viewApp.status === "approved" ? "bg-nasmed-green" : "bg-red-500"}`} />
+                  {viewApp.status.charAt(0).toUpperCase() + viewApp.status.slice(1)}
+                </span>
+                <span className="py-1 px-3 rounded-full text-[12px] font-bold border border-nasmed-mid-blue text-nasmed-mid-blue bg-nasmed-mid-blue/5">
+                  {viewApp.tier}
+                </span>
+                <span className={`py-1 px-3 rounded-full text-[12px] font-bold border ${viewApp.payment === "Paid" ? "border-nasmed-green text-nasmed-green bg-nasmed-green/5" : "border-amber-400 text-amber-600 bg-amber-50"}`}>
+                  Payment: {viewApp.payment === "Paid" ? "✓" : "⏳"} {viewApp.payment}
+                </span>
+              </div>
+              <span className="text-[12px] text-nasmed-text-muted">Submitted: {viewApp.submitted}</span>
+            </div>
+
+            {/* ── Scrollable body ── */}
+            <div className="overflow-y-auto flex-1 px-7 py-6 flex flex-col gap-7">
+
+              {/* Section A */}
+              <div>
+                <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-4 pb-2 border-b border-nasmed-gray-light">
+                  Section A — Contact Details & Personal Information
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {field("Full Name", viewApp.name)}
+                  {field("Personal Email", viewApp.email)}
+                  {field("Mobile Number", viewApp.phone)}
+                  {field("Alternate Email", viewApp.altEmail)}
+                  {field("State of Practice", viewApp.state)}
+                  {field("Profession / Specialty", viewApp.prof)}
+                  {field("Qualifications", viewApp.qualifications)}
+                  {field("Place of Work", viewApp.workplace)}
+                </div>
+              </div>
+
+              {/* Referee Details */}
+              <div>
+                <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-4 pb-2 border-b border-nasmed-gray-light">
+                  Referee Details
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[{ label: "Referee 1", ref: viewApp.referee1 }, { label: "Referee 2", ref: viewApp.referee2 }].map(({ label, ref }) => (
+                    <div key={label} className="border border-nasmed-gray-light rounded-lg p-4 bg-nasmed-off-white/40">
+                      <p className="text-[11px] font-bold tracking-[1.5px] uppercase text-nasmed-mid-blue mb-3">{label}</p>
+                      <div className="flex flex-col gap-1.5 text-[13px]">
+                        <div className="grid grid-cols-[60px_1fr] gap-1">
+                          <span className="text-nasmed-text-muted font-medium">Name:</span>
+                          <span className="text-nasmed-navy font-semibold">{ref.name}</span>
+                        </div>
+                        <div className="grid grid-cols-[60px_1fr] gap-1">
+                          <span className="text-nasmed-text-muted font-medium">Email:</span>
+                          <span className="text-nasmed-navy">{ref.email}</span>
+                        </div>
+                        <div className="grid grid-cols-[60px_1fr] gap-1">
+                          <span className="text-nasmed-text-muted font-medium">Mobile:</span>
+                          <span className="text-nasmed-navy">{ref.mobile}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Candidate Statement */}
+              <div>
+                <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-4 pb-2 border-b border-nasmed-gray-light">
+                  Candidate Statement ({viewApp.tier})
+                </p>
+                <div className="border border-nasmed-gray-light rounded-lg p-4 bg-nasmed-off-white/40">
+                  <p className="text-[13.5px] text-nasmed-navy leading-relaxed">{viewApp.statement}</p>
+                </div>
+              </div>
+
+              {/* Declaration */}
+              <div>
+                <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-4 pb-2 border-b border-nasmed-gray-light">
+                  Declaration & Payment
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {field("Declaration Signed", "Yes — I agree to uphold NASMED's code of conduct")}
+                  {field("Payment Status", viewApp.payment === "Paid" ? "✓ Payment confirmed" : "⏳ Awaiting payment")}
+                </div>
+              </div>
+
+            </div>
+
+            {/* ── Footer actions ── */}
+            <div className="flex items-center gap-3 px-7 py-4 border-t border-nasmed-gray-light bg-white flex-shrink-0">
+              <button
+                onClick={() => setViewApp(null)}
+                className="py-3 px-6 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold cursor-pointer hover:bg-nasmed-off-white transition-all bg-white"
+              >
+                Close
+              </button>
+              {viewApp.status === "pending" && (
+                <>
+                  <button
+                    onClick={() => { handleAction(viewApp.id, "approve"); setViewApp(null); }}
+                    className="flex-1 py-3 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                  >
+                    ✓ Approve & Notify
+                  </button>
+                  <button
+                    onClick={() => { handleAction(viewApp.id, "reject"); setViewApp(null); }}
+                    className="flex-1 py-3 rounded-lg bg-red-500 text-white border-none text-[14px] font-bold cursor-pointer hover:bg-red-600 transition-all"
+                  >
+                    ✗ Reject & Notify
+                  </button>
+                </>
+              )}
+              {viewApp.status !== "pending" && (
+                <span className={`text-[13px] font-semibold ml-2 ${viewApp.status === "approved" ? "text-nasmed-green" : "text-red-500"}`}>
+                  This application has been {viewApp.status}.
+                </span>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
