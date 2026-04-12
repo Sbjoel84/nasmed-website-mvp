@@ -3,12 +3,20 @@ import { Link } from "react-router-dom";
 import hero1 from "@/assets/hero-1.jpg";
 import hero2 from "@/assets/hero-2.jpg";
 import hero3 from "@/assets/hero-3.jpg";
+import hero4 from "@/assets/hero-4.jpg";
+import hero5 from "@/assets/hero-5.jpg";
+import swearingIn from "@/assets/swearing-in.jpg";
+import cacHandover from "@/assets/cac-handover.jpg";
 import aboutImg from "@/assets/about-img.jpg";
 
 const heroSlides = [
   { image: hero1, title: "Advancing <em>Sports Medicine</em> Across Nigeria", sub: "The premier professional body uniting physicians, physiotherapists, scientists and allied health professionals dedicated to sports and exercise medicine excellence." },
   { image: hero2, title: "Building <em>Healthier Athletes</em>, Stronger Communities", sub: "Pioneering research, education and clinical practice in sports medicine to elevate athletic performance and public health outcomes across Africa." },
   { image: hero3, title: "Shaping the <em>Future</em> of Exercise Medicine", sub: "Join 1,400+ professionals committed to evidence-based practice, continuing education, and advancing the science of human movement and performance." },
+  { image: hero4, title: "Professional <em>Collaboration</em> & Leadership", sub: "NASMED leaders working together to advance sports medicine standards, policies, and professional development across Nigeria." },
+  { image: hero5, title: "Expert <em>Mentorship</em> & Guidance", sub: "Experienced practitioners sharing knowledge and guiding the next generation of sports medicine professionals in Nigeria." },
+  { image: swearingIn, title: "A New Era of <em>Leadership</em>", sub: "The swearing-in of NASMED's new executive committee, committed to taking the Association to greater heights." },
+  { image: cacHandover, title: "<em>Official Recognition</em> & Incorporation", sub: "NASMED's CAC certificate handover — a milestone in the Association's journey as a registered professional body in Nigeria." },
 ];
 
 const stats = [

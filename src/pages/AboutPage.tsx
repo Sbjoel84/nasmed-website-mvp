@@ -1,11 +1,15 @@
 import PageHeader from "@/components/PageHeader";
 import aboutImg from "@/assets/about-img.jpg";
+import leaderPresident from "@/assets/leader-president.jpg";
+import leaderFunke from "@/assets/leader-funke.jpg";
+import leaderChukwuemeka from "@/assets/leader-chukwuemeka.jpg";
+import leaderTunde from "@/assets/leader-tunde.jpg";
 
 const leaders = [
-  { name: "Dr. Olajide Adebola", role: "President", bio: "Sports Medicine Physician and President of NASMED, championing athlete health and professional excellence across Nigeria." },
-  { name: "Dr. Funke Bakare", role: "Vice President", bio: "Distinguished sports medicine practitioner and NASMED Vice President, committed to advancing women in sports health." },
-  { name: "Dr. Chukwuemeka Eze", role: "Secretary General", bio: "Sports Physician and Secretary General overseeing NASMED's national secretariat and inter-state coordination." },
-  { name: "Dr. Tunde Oyelaran", role: "Director of Research", bio: "Orthopaedic Surgeon and Research Director spearheading evidence-based publications and academic programmes." },
+  { name: "Dr. Olajide Adebola", role: "President", bio: "Sports Medicine Physician and President of NASMED, championing athlete health and professional excellence across Nigeria.", image: leaderPresident },
+  { name: "Dr. Funke Bakare", role: "Vice President", bio: "Distinguished sports medicine practitioner and NASMED Vice President, committed to advancing women in sports health.", image: leaderFunke },
+  { name: "Dr. Chukwuemeka Eze", role: "Secretary General", bio: "Sports Physician and Secretary General overseeing NASMED's national secretariat and inter-state coordination.", image: leaderChukwuemeka },
+  { name: "Dr. Tunde Oyelaran", role: "Director of Research", bio: "Orthopaedic Surgeon and Research Director spearheading evidence-based publications and academic programmes.", image: leaderTunde },
 ];
 
 const missionCards = [
