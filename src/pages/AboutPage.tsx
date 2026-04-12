@@ -106,10 +106,10 @@ export default function AboutPage() {
             </div>
           </div>
           <div>
-            <div className="section-label">Our Story</div>
-            <h2 className="section-title">A Legacy of Excellence</h2>
-            <p className="text-nasmed-text-muted text-base leading-relaxed mb-6">
-              Founded in 1994, the Nigeria Association of Sports Medicine (NASMED) has grown from a small group of passionate physicians to Nigeria's foremost authority on sports and exercise medicine, with members across all 36 states and the FCT.
+            <div className="section-label">MILESTONE</div>
+            <h2 className="section-title">CAC Certificate of Incorporation Received</h2>
+            <p className="text-nasmed-text-muted text-base leading-relaxed mb-6 font-light text-xl">
+              NASMED officially receives its Certificate of Incorporation from CAC — a landmark achievement.
             </p>
             <p className="text-nasmed-text-muted text-base leading-relaxed italic text-nasmed-mid-blue">
               "Mens sana in corpore sano" — A sound mind in a sound body.
