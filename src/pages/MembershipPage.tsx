@@ -177,6 +177,7 @@ export default function MembershipPage() {
       </div>
 
       {/* APPLICATION FORM */}
+      {step >= 1 && (
       <section className="bg-nasmed-off-white py-16 px-6 md:px-12" id="app-form">
         <div className="max-w-[900px] mx-auto">
           <div className="text-center mb-12">
