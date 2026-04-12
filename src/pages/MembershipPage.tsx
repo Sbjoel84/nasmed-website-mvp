@@ -377,6 +377,7 @@ export default function MembershipPage() {
           )}
         </div>
       </section>
+      )}
     </div>
   );
 }
