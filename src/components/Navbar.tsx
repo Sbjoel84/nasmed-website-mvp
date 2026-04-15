@@ -5,6 +5,7 @@ import logo from "@/assets/nasmed-logo.png";
 const navLinks = [
   { label: "Home", path: "/" },
   { label: "About", path: "/about" },
+  { label: "Strategic Plan", path: "/strategic-plan" },
   { label: "Membership", path: "/membership" },
   { label: "Publications", path: "/publications" },
   { label: "Store", path: "/store" },

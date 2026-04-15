@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
+import { applicationService } from "@/services/applicationService";
 
 const nigerianStates = [
   "Abuja (FCT)", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -29,6 +30,7 @@ const membershipPlans = [
 export default function MembershipPage() {
   const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
@@ -61,7 +63,7 @@ export default function MembershipPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.fullName || !formData.email || !formData.category) {
       toast.error("Please complete all required fields.");
       setStep(1);
@@ -72,8 +74,37 @@ export default function MembershipPage() {
       setStep(1);
       return;
     }
-    toast.success("Application submitted successfully!");
-    setStep(5);
+
+    setIsSubmitting(true);
+    try {
+      await applicationService.create({
+        full_name: formData.fullName,
+        email: formData.email,
+        phone: formData.mobile,
+        profession: formData.category,
+        membership_type: formData.category,
+        state: formData.state,
+        qualifications: "",
+        workplace: "",
+        referee1_name: formData.ref1Name || "",
+        referee1_email: formData.ref1Email || "",
+        referee1_phone: formData.ref1Mobile || "",
+        referee2_name: formData.ref2Name || "",
+        referee2_email: formData.ref2Email || "",
+        referee2_phone: formData.ref2Mobile || "",
+        statement: formData.statement,
+      });
+      toast.success("Application submitted successfully! We will review and contact you soon.");
+      setStep(5);
+    } catch (error: any) {
+      console.error("Application error:", error);
+      const errorMessage = error?.message || "Failed to submit application. Please try again.";
+      const details = error?.details || error?.hint || "";
+      const fullMessage = details ? `${errorMessage}\n\nDetails: ${details}` : errorMessage;
+      toast.error(fullMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const wordCount = formData.statement.trim().split(/\s+/).filter(w => w).length;
@@ -392,7 +423,9 @@ export default function MembershipPage() {
                       Next →
                     </button>
                   ) : (
-                    <button onClick={handleSubmit} className="bg-nasmed-green text-white border-none py-3.5 px-11 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all">Submit Application →</button>
+                    <button onClick={handleSubmit} disabled={isSubmitting} className="bg-nasmed-green text-white border-none py-3.5 px-11 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSubmitting ? "Submitting..." : "Submit Application →"}
+                    </button>
                   )}
                 </div>
               </div>

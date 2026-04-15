@@ -13,9 +13,14 @@ import ContactPage from "@/pages/ContactPage";
 import AdminPage from "@/pages/AdminPage";
 import MemberLoginPage from "@/pages/MemberLoginPage";
 import NewsPage from "@/pages/NewsPage";
+import StrategicPlanPage from "@/pages/StrategicPlanPage";
+import MemberDashboardPage from "@/pages/MemberDashboardPage";
 import NotFound from "@/pages/NotFound";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import "@/lib/supabaseSetup"; // Run diagnostics on app load
 
 const queryClient = new QueryClient();
 
@@ -25,28 +30,65 @@ function ScrollToTop() {
   return null;
 }
 
+function AppContent() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-nasmed-off-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-nasmed-green border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-nasmed-text-muted">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Navbar />
+      <main className="pt-[78px]">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/strategic-plan" element={<StrategicPlanPage />} />
+          <Route path="/membership" element={<MembershipPage />} />
+          <Route path="/publications" element={<PublicationsPage />} />
+          <Route path="/store" element={<StorePage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/news" element={<NewsPage />} />
+          
+          {/* Public Routes */}
+          <Route element={<PublicRoute />}>
+            <Route path="/member-login" element={<MemberLoginPage />} />
+          </Route>
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/member-dashboard" element={<MemberDashboardPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute requireAdmin />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      <Footer />
+    </>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
-        <Navbar />
-        <main className="pt-[78px]">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/membership" element={<MembershipPage />} />
-            <Route path="/publications" element={<PublicationsPage />} />
-            <Route path="/store" element={<StorePage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/member-login" element={<MemberLoginPage />} />
-            <Route path="/news" element={<NewsPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </main>
-        <Footer />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
