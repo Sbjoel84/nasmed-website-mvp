@@ -16,7 +16,7 @@ import NewsPage from "@/pages/NewsPage";
 import StrategicPlanPage from "@/pages/StrategicPlanPage";
 import MemberDashboardPage from "@/pages/MemberDashboardPage";
 import NotFound from "@/pages/NotFound";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -31,19 +31,6 @@ function ScrollToTop() {
 }
 
 function AppContent() {
-  const { loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-nasmed-off-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-nasmed-green border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-nasmed-text-muted">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <Navbar />

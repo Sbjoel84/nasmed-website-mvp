@@ -1,5 +1,5 @@
 import supabase from './supabaseClient';
-import type { User, Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;
@@ -10,10 +10,31 @@ export interface AuthUser {
 }
 
 export const authService = {
-  async signIn(email: string, password: string): Promise<{ user: AuthUser | null; session: Session | null; error: string | null }> {
+  async signIn(credential: string, password: string): Promise<{ user: AuthUser | null; session: Session | null; error: string | null }> {
     try {
+      // Determine if credential is email or username
+      const isEmail = credential.includes('@');
+      let emailToUse = credential;
+
+      // If it's a username, look up the email from profiles table
+      if (!isEmail) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('email')
+          .ilike('full_name', `%${credential}%`)
+          .or(`email.ilike.%${credential}%`)
+          .single();
+
+        if (profileData?.email) {
+          emailToUse = profileData.email;
+        } else {
+          // Try fuzzy match on username or name
+          return { user: null, session: null, error: 'Username or email not found' };
+        }
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailToUse,
         password,
       });
 
@@ -127,6 +148,16 @@ export const authService = {
       return session;
     } catch (err) {
       return null;
+    }
+  },
+
+  async updatePassword(newPassword: string): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err) {
+      return { error: 'An unexpected error occurred' };
     }
   },
 

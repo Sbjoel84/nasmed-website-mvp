@@ -1,15 +1,17 @@
 import PageHeader from "@/components/PageHeader";
 import aboutImg from "@/assets/about-img.jpg";
-import leaderPresident from "@/assets/leader-president.jpg";
-import leaderFunke from "@/assets/leader-funke.jpg";
-import leaderChukwuemeka from "@/assets/leader-chukwuemeka.jpg";
-import leaderTunde from "@/assets/leader-tunde.jpg";
 
 const leaders = [
-  { name: "Dr. Olajide Adebola", role: "President", bio: "Sports Medicine Physician and President of NASMED, championing athlete health and professional excellence across Nigeria.", image: leaderPresident },
-  { name: "Dr. Funke Bakare", role: "Vice President", bio: "Distinguished sports medicine practitioner and NASMED Vice President, committed to advancing women in sports health.", image: leaderFunke },
-  { name: "Dr. Chukwuemeka Eze", role: "Secretary General", bio: "Sports Physician and Secretary General overseeing NASMED's national secretariat and inter-state coordination.", image: leaderChukwuemeka },
-  { name: "Dr. Tunde Oyelaran", role: "Director of Research", bio: "Orthopaedic Surgeon and Research Director spearheading evidence-based publications and academic programmes.", image: leaderTunde },
+  { name: "Dr. Olajide Joseph Adebola", role: "President", location: "Abuja", initials: "OA" },
+  { name: "Dr. Adebukola Bojuwoye", role: "1st Vice President", location: "Lagos", initials: "AB" },
+  { name: "Dr. Ummukulthoum Bakare", role: "2nd Vice President", location: "Canada", initials: "UB" },
+  { name: "Dr. Ibrahim Tijjani Bashir", role: "3rd Vice President", location: "Bauchi", initials: "IB" },
+  { name: "Dr. Obinnaya Francis Udugwu", role: "Secretary General", location: "Port Harcourt", initials: "OU" },
+  { name: "Dr. Marian Odu", role: "Asst. Secretary General", location: "Lagos", initials: "MO" },
+  { name: "Amaka Judit Enebe", role: "Treasurer", location: "Enugu", initials: "AE" },
+  { name: "Dr. Anieze Kenechukwu John", role: "Financial Secretary", location: "Enugu", initials: "AJ" },
+  { name: "Dr. Babatunde John Akinbinu", role: "Publicity Secretary", location: "Akure", initials: "BA" },
+  { name: "Dr. Mazeed Oloko", role: "Ex-Officio", location: "Abeokuta", initials: "MO" },
 ];
 
 const missionCards = [
@@ -122,9 +124,11 @@ export default function AboutPage() {
       <div className="bg-nasmed-navy py-10 px-6 md:px-12">
         <div className="max-w-[1200px] mx-auto flex items-center gap-8 flex-wrap">
           <div className="text-white/50 text-xs font-bold tracking-[2px] uppercase whitespace-nowrap">Affiliated With</div>
-          <div className="flex gap-3.5 flex-wrap">
-            {["Nigerian Olympic Committee (NOC)", "FIMS", "African Union of Sports Medicine", "Corporate Affairs Commission (CAC)"].map(a => (
-              <div key={a} className="bg-white/10 border border-white/15 text-white/80 py-2 px-4 rounded-md text-[13px] font-semibold">{a}</div>
+          <div className="flex gap-3 flex-wrap items-center">
+            {["/affiliate%20(1).png", "/affiliate%20(2).png", "/affiliate%20(3).png"].map((src, i) => (
+              <div key={i} className="w-11 h-11 rounded-full bg-white border-2 border-white/30 overflow-hidden flex items-center justify-center shadow-md">
+                <img src={src} alt={`Affiliate ${i + 1}`} className="w-full h-full object-contain p-1" />
+              </div>
             ))}
           </div>
         </div>
@@ -206,20 +210,48 @@ export default function AboutPage() {
         <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-12">
             <div className="section-label justify-center text-center">Leadership</div>
-            <h2 className="section-title text-center">Current National Executive Board (2024)</h2>
+            <h2 className="section-title text-center">Current National Executive Committee (2024–2028)</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
             {leaders.map(l => (
-              <div key={l.name} className="rounded-[14px] overflow-hidden border-[1.5px] border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1 hover:border-nasmed-mid-blue">
-                <div className="w-full aspect-square overflow-hidden">
-                  <img src={l.image} alt={l.name} className="w-full h-full object-cover" loading="lazy" />
+              <div key={l.name + l.role} className="rounded-[14px] overflow-hidden border-[1.5px] border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1 hover:border-nasmed-mid-blue">
+                {/* Photo placeholder frame */}
+                <div className="w-full aspect-square bg-gradient-to-br from-nasmed-navy/10 to-nasmed-mid-blue/10 flex flex-col items-center justify-center border-b-2 border-dashed border-nasmed-gray-light relative">
+                  <div className="w-16 h-16 rounded-full bg-nasmed-navy/15 border-2 border-dashed border-nasmed-mid-blue/40 flex items-center justify-center mb-2">
+                    <span className="text-nasmed-navy/40 text-xl font-bold">{l.initials}</span>
+                  </div>
+                  <span className="text-[10px] text-nasmed-text-muted/50 font-medium tracking-wide">Photo coming soon</span>
                 </div>
                 <div className="p-4">
-                  <div className="font-bold text-sm text-nasmed-navy mb-1">{l.name}</div>
-                  <div className="text-xs text-nasmed-green font-semibold tracking-wide mb-2">{l.role}</div>
-                  <div className="text-xs text-nasmed-text-muted leading-relaxed">{l.bio}</div>
+                  <div className="font-bold text-sm text-nasmed-navy mb-1 leading-snug">{l.name}</div>
+                  <div className="text-xs text-nasmed-green font-semibold tracking-wide mb-1">{l.role}</div>
+                  <div className="text-[11px] text-nasmed-text-muted">{l.location}</div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact strip */}
+      <section className="bg-nasmed-navy py-14 px-6 md:px-12">
+        <div className="max-w-[900px] mx-auto text-center">
+          <div className="section-label justify-center text-white/50 mb-3">Get in Touch</div>
+          <h2 className="font-heading text-2xl md:text-3xl text-white font-bold mb-8">We're Here to Help</h2>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {[
+              { label: "General Enquiries", email: "contact@nasmed.ng" },
+              { label: "Office of the President", email: "President@nasmed.ng" },
+              { label: "Secretariat", email: "Secretary@nasmed.ng" },
+            ].map(({ label, email }) => (
+              <a
+                key={email}
+                href={`mailto:${email}`}
+                className="flex flex-col items-center gap-1 bg-white/10 hover:bg-nasmed-green transition-colors border border-white/15 rounded-[12px] py-5 px-7 no-underline group w-full sm:w-auto"
+              >
+                <span className="text-white/50 text-[11px] font-semibold tracking-wide group-hover:text-white/70">{label}</span>
+                <span className="text-white text-sm font-semibold">{email}</span>
+              </a>
             ))}
           </div>
         </div>

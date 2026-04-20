@@ -1,6 +1,7 @@
--- NASMED Database Setup (Safe - handles existing objects)
+-- Simple Supabase-compatible schema for NASMED
+-- Run this in Supabase SQL Editor
 
--- Create profiles table for user roles and metadata
+-- Create profiles table
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL UNIQUE,
@@ -11,20 +12,21 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security on profiles
+-- Enable RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can view all profiles (for lookups)
+-- Drop existing policies if they exist
 DROP POLICY IF EXISTS "allow_read_profiles" ON public.profiles;
+DROP POLICY IF EXISTS "allow_update_own_profile" ON public.profiles;
+
+-- Create policies
 CREATE POLICY "allow_read_profiles" ON public.profiles
   FOR SELECT USING (true);
 
--- Policy: Users can update their own profile
-DROP POLICY IF EXISTS "allow_update_own_profile" ON public.profiles;
 CREATE POLICY "allow_update_own_profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
--- Create tables (if not exists)
+-- Create other tables
 CREATE TABLE IF NOT EXISTS public.applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -70,55 +72,22 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   amount TEXT
 );
 
--- Enable RLS (only if not already enabled)
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relname = 'applications'
-        AND n.nspname = 'public'
-        AND c.relrowsecurity = true
-    ) THEN
-        ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
-    END IF;
+-- Enable RLS on other tables
+ALTER TABLE public.applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.publications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relname = 'publications'
-        AND n.nspname = 'public'
-        AND c.relrowsecurity = true
-    ) THEN
-        ALTER TABLE public.publications ENABLE ROW LEVEL SECURITY;
-    END IF;
+-- Drop existing policies
+DROP POLICY IF EXISTS "allow_all_applications" ON public.applications;
+DROP POLICY IF EXISTS "allow_all_publications" ON public.publications;
+DROP POLICY IF EXISTS "allow_all_subscriptions" ON public.subscriptions;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relname = 'subscriptions'
-        AND n.nspname = 'public'
-        AND c.relrowsecurity = true
-    ) THEN
-        ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-    END IF;
-END $$;
+-- Create policies for other tables
+CREATE POLICY "allow_all_applications" ON public.applications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_publications" ON public.publications FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_subscriptions" ON public.subscriptions FOR ALL USING (true) WITH CHECK (true);
 
--- Create policies (only if they don't exist)
-DO $$
-BEGIN
-    -- Drop existing policies if they exist
-    DROP POLICY IF EXISTS "allow_all_applications" ON public.applications;
-    DROP POLICY IF EXISTS "allow_all_publications" ON public.publications;
-    DROP POLICY IF EXISTS "allow_all_subscriptions" ON public.subscriptions;
-
-    -- Create new policies
-    CREATE POLICY "allow_all_applications" ON public.applications FOR ALL USING (true) WITH CHECK (true);
-    CREATE POLICY "allow_all_publications" ON public.publications FOR ALL USING (true) WITH CHECK (true);
-    CREATE POLICY "allow_all_subscriptions" ON public.subscriptions FOR ALL USING (true) WITH CHECK (true);
-END $$;
-
--- Function to auto-create profile on auth signup
+-- Create function and trigger for auto-profile creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -132,18 +101,17 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to auto-create profile on user creation
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_user();
 
--- Create indexes for faster lookups
+-- Create indexes
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 
--- Seed data (safe - won't duplicate)
+-- Seed publications
 INSERT INTO publications (title, type, description, status, downloads)
 VALUES
   ('NASMED Clinical Guidelines 2024', 'Guidelines', 'Official clinical guidelines for sports injury management', 'published', 234),

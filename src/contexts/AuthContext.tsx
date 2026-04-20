@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import authService, { AuthUser } from '../lib/authService';
 
 interface AuthContextType {
   user: AuthUser | null;
-  session: User | null;
+  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, fullName: string, membershipType: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   isAdmin: boolean;
   isMember: boolean;
 }
@@ -17,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (currentUser) {
         setUser(currentUser);
         const session = await authService.getSession();
-        setSession(session?.user || null);
+        setSession(session);
       }
       setLoading(false);
     };
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && session) {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
-        setSession(session.user);
+        setSession(session);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setSession(null);
@@ -57,9 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       setUser(user);
       const session = await authService.getSession();
-      setSession(session?.user || null);
+      setSession(session);
     }
     return { error: null };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    return authService.updatePassword(newPassword);
   };
 
   const signUp = async (email: string, password: string, fullName: string, membershipType: string) => {
@@ -91,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signUp,
         signOut,
+        updatePassword,
         isAdmin,
         isMember,
       }}

@@ -29,9 +29,9 @@ export default function ContactPage() {
             {[
               { icon: "📍", title: "Head Office", desc: "NASMED National Secretariat,\nAbuja, Federal Capital Territory, Nigeria" },
               { icon: "📧", title: "Email", desc: "info@nasmed.org.ng\nsecretary@nasmed.org.ng\nregistration@nasmed.org.ng" },
-              { icon: "📞", title: "Phone", desc: "+234 (0) 800 NASMED\n+234 803 000 0000" },
+              { icon: "📞", title: "Phone", desc: "+234 802 325 3372\ +234 703 075 1474" },
               { icon: "🕐", title: "Office Hours", desc: "Monday – Friday: 9:00am – 5:00pm\nSaturday: 10:00am – 2:00pm" },
-              { icon: "📍", title: "Liaison Office", desc: "Lagos State, Nigeria" },
+              { icon: "📍", title: "Head Office", desc: "Abuja FCT, Nigeria" },
             ].map(c => (
               <div key={c.title + c.desc} className="flex gap-4 py-5 border-b border-nasmed-gray-light">
                 <div className="w-11 h-11 rounded-[10px] bg-nasmed-mid-blue/10 flex items-center justify-center text-xl shrink-0">{c.icon}</div>

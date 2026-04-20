@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoadingScreen } from "@/components/ui/loading-spinner";
 import logo from "@/assets/nasmed-logo.png";
 
 const DEMO_APPS = [
@@ -118,10 +121,10 @@ type Publication = typeof DEMO_PUBLICATIONS[0];
 type Subscription = typeof DEMO_SUBSCRIPTIONS[0];
 
 export default function AdminPage() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [user, setUser] = useState("admin");
-  const [pass, setPass] = useState("nasmed2024");
-  const [loginErr, setLoginErr] = useState(false);
+  const { user, loading, signOut, isAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  // All hooks must be declared before any conditional returns (React rules of hooks)
   const [activeSection, setActiveSection] = useState("dashboard");
   const [applications, setApplications] = useState(DEMO_APPS);
   const [members, setMembers] = useState(DEMO_MEMBERS_INIT);
@@ -129,11 +132,7 @@ export default function AdminPage() {
   const [subscriptions, setSubscriptions] = useState(DEMO_SUBSCRIPTIONS);
   const [search, setSearch] = useState("");
   const [totalMembers, setTotalMembers] = useState(1433);
-
-  // View application modal
   const [viewApp, setViewApp] = useState<App | null>(null);
-
-  // Add member form
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
   const [afEmail, setAfEmail] = useState("");
@@ -141,19 +140,48 @@ export default function AdminPage() {
   const [afProf, setAfProf] = useState("");
   const [afTier, setAfTier] = useState("Professional Member");
   const [afState, setAfState] = useState("");
-
-  // Publication form
   const [pubTitle, setPubTitle] = useState("");
   const [pubType, setPubType] = useState("Guidelines");
   const [pubContent, setPubContent] = useState("");
-
-  // Edit member modal
   const [editMember, setEditMember] = useState<typeof DEMO_MEMBERS_INIT[0] | null>(null);
 
-  const handleLogin = () => {
-    if (user === "admin" && pass === "nasmed2024") { setLoggedIn(true); setLoginErr(false); }
-    else setLoginErr(true);
-  };
+  // Redirect if not authenticated or not admin
+  if (loading) {
+    return <LoadingScreen message="Verifying admin access..." size="medium" />;
+  }
+
+  if (!user) {
+    navigate("/member-login");
+    return null;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="pt-[78px] min-h-screen bg-nasmed-off-white flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-12 w-full max-w-[440px] shadow-xl text-center">
+          <div className="text-4xl mb-4">🔒</div>
+          <h2 className="font-heading text-nasmed-navy text-[26px] mb-2">Access Denied</h2>
+          <p className="text-nasmed-text-muted text-sm mb-6">You do not have admin privileges. Only administrators can access this portal.</p>
+
+          {/* Debug Info */}
+          <div className="bg-gray-50 p-4 rounded-lg mb-4 text-left text-xs">
+            <strong>Debug Info:</strong><br/>
+            Email: {user?.email}<br/>
+            Role: {user?.role || 'No role set'}<br/>
+            isAdmin: {isAdmin ? 'Yes' : 'No'}<br/>
+            User ID: {user?.id}
+          </div>
+
+          <button
+            onClick={() => signOut()}
+            className="bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAction = (id: string, action: string) => {
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: action === "approve" ? "approved" : "rejected" } : a));
@@ -228,33 +256,6 @@ export default function AdminPage() {
     return <span className={`py-1 px-2.5 rounded-full text-[11px] font-bold tracking-wide capitalize ${map[s] || ""}`}>{s}</span>;
   };
 
-  if (!loggedIn) {
-    return (
-      <div className="pt-[78px] min-h-screen bg-nasmed-off-white flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-12 w-full max-w-[440px] shadow-xl">
-          <div className="text-center mb-8">
-            <img src={logo} alt="NASMED" className="w-20 h-20 rounded-full object-cover border-[3px] border-nasmed-green-light mx-auto mb-4" />
-            <h2 className="font-heading text-nasmed-navy text-[26px] mb-1.5">Admin Portal</h2>
-            <p className="text-nasmed-text-muted text-sm">Sign in to manage NASMED membership applications and records.</p>
-          </div>
-          {loginErr && <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px] mb-4">Invalid credentials. Please try again.</div>}
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-nasmed-navy">Username</label>
-              <input type="text" value={user} onChange={e => setUser(e.target.value)} placeholder="admin" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-nasmed-navy">Password</label>
-              <input type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" onKeyDown={e => e.key === "Enter" && handleLogin()} />
-            </div>
-            <button onClick={handleLogin} className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full">Sign In →</button>
-          </div>
-          <p className="text-center text-xs text-nasmed-gray mt-4">Demo: admin / nasmed2024</p>
-        </div>
-      </div>
-    );
-  }
-
   const pendingCount = applications.filter(a => a.status === "pending").length;
   const approvedCount = applications.filter(a => a.status === "approved").length;
 
@@ -302,7 +303,7 @@ export default function AdminPage() {
               </li>
             ))}
             <li>
-              <button onClick={() => setLoggedIn(false)} className="w-full flex items-center gap-2.5 py-2.5 px-6 text-white/65 text-[13.5px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white mt-8">
+              <button onClick={signOut} className="w-full flex items-center gap-2.5 py-2.5 px-6 text-white/65 text-[13.5px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white mt-8">
                 <span className="text-base w-5 text-center">🚪</span>Sign Out
               </button>
             </li>

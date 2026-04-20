@@ -76,10 +76,12 @@ export default function HomePage() {
             <Link to="/about" className="btn-outline-hero">Explore NASMED</Link>
           </div>
           <div className="flex items-center gap-5 flex-wrap">
-            <span className="text-white/45 text-[11px] tracking-[1.5px] uppercase">Recognised by</span>
-            <div className="flex gap-2.5 flex-wrap">
-              {["FIMS", "IOC", "NMA", "WHO"].map((badge) => (
-                <span key={badge} className="bg-white/10 border border-white/15 text-white/70 py-1 px-3 rounded text-[11px] font-semibold tracking-wide">{badge}</span>
+            <span className="text-white/45 text-[11px] tracking-[1.5px] uppercase">Affiliated With</span>
+            <div className="flex gap-3 flex-wrap items-center">
+              {["/affiliate%20(1).png", "/affiliate%20(2).png", "/affiliate%20(3).png"].map((src, i) => (
+                <div key={i} className="w-11 h-11 rounded-full bg-white border-2 border-white/30 overflow-hidden flex items-center justify-center shadow-md">
+                  <img src={src} alt={`Affiliate ${i + 1}`} className="w-full h-full object-contain p-1" />
+                </div>
               ))}
             </div>
           </div>

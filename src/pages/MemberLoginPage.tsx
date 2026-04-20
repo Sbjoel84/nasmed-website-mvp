@@ -4,10 +4,11 @@ import { Link, useNavigate } from "react-router-dom";
 import logo from "@/assets/nasmed-logo.png";
 import PageHeader from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
+import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { publicationService, Publication } from "@/services/publicationService";
 
 export default function MemberLoginPage() {
-  const { user, signIn, loading: authLoading, isAdmin } = useAuth();
+  const { user, signIn, loading: authLoading, isAdmin, updatePassword } = useAuth();
   const navigate = useNavigate();
   
   const [email, setEmail] = useState("");
@@ -57,24 +58,22 @@ export default function MemberLoginPage() {
     }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (oldPass.length < 8) { setPassErr("Current password is required."); return; }
     if (newPass.length < 8) { setPassErr("New password must be at least 8 characters."); return; }
     if (newPass !== confPass) { setPassErr("New passwords do not match."); return; }
     setPassErr("");
-    toast.success("Password updated successfully!");
-    setOldPass(""); setNewPass(""); setConfPass("");
+    const { error } = await updatePassword(newPass);
+    if (error) {
+      setPassErr(error);
+    } else {
+      toast.success("Password updated successfully!");
+      setOldPass(""); setNewPass(""); setConfPass("");
+    }
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-nasmed-off-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-nasmed-green border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-nasmed-text-muted">Loading...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Checking your session..." size="medium" />;
   }
 
   if (user) {
@@ -206,12 +205,12 @@ export default function MemberLoginPage() {
           
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-nasmed-navy">Email</label>
+              <label className="text-[13px] font-semibold text-nasmed-navy">Username or Email</label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="your.email@example.com"
+                placeholder="your.username or email@example.com"
                 className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
                 required
               />

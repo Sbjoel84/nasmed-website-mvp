@@ -51,9 +51,10 @@ export default function Footer() {
         <div>
           <h5 className="text-white text-[13px] font-semibold tracking-wide mb-4">Contact & Newsletter</h5>
           <ul className="list-none flex flex-col gap-2.5 mb-3.5">
-            <li><a href="mailto:info@nasmed.org.ng" className="text-white/55 no-underline text-sm">info@nasmed.org.ng</a></li>
-            <li><a href="mailto:secretary@nasmed.org.ng" className="text-white/55 no-underline text-sm">secretary@nasmed.org.ng</a></li>
-            <li><span className="text-sm">+234 (0) 800 NASMED</span></li>
+            <li><a href="mailto:contact@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">contact@nasmed.ng</a></li>
+            <li><a href="mailto:President@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">President@nasmed.ng</a></li>
+            <li><a href="mailto:Secretary@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">Secretary@nasmed.ng</a></li>
+            <li><a href="tel:+2347030751474" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">+234 703 075 1474</a></li>
             <li><span className="text-sm">Abuja, FCT — Nigeria</span></li>
           </ul>
           <p className="text-xs text-white/35 mb-1.5">Subscribe for updates:</p>
@@ -75,7 +76,18 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto mt-6 flex flex-col md:flex-row items-center justify-between text-[13px] text-white/30 gap-2">
+      <div className="max-w-[1200px] mx-auto mt-6 mb-5 flex flex-col sm:flex-row items-center gap-4">
+        <span className="text-white/35 text-[11px] font-bold tracking-[1.5px] uppercase whitespace-nowrap">Affiliated With</span>
+        <div className="flex gap-3 items-center flex-wrap">
+          {["/affiliate%20(1).png", "/affiliate%20(2).png", "/affiliate%20(3).png"].map((src, i) => (
+            <div key={i} className="w-10 h-10 rounded-full bg-white border-2 border-white/20 overflow-hidden flex items-center justify-center shadow-md">
+              <img src={src} alt={`Affiliate ${i + 1}`} className="w-full h-full object-contain p-1" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between text-[13px] text-white/30 gap-2">
         <span>© 2024 Nigeria Association of Sports Medicine (NASMED). All rights reserved.</span>
         <span>Registered with CAC, Nigeria</span>
       </div>
