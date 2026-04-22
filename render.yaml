@@ -1,12 +1,12 @@
 services:
   - type: web
     name: nasmed-website
-    runtime: node
+    env: static
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    staticPublishPath: ./dist
     envVars:
       - key: NODE_VERSION
-        value: 20.11.0
+        value: "20"
       - key: VITE_SUPABASE_URL
         sync: false
       - key: VITE_SUPABASE_ANON_KEY
@@ -19,3 +19,7 @@ services:
         sync: false
       - key: VITE_EMAILJS_PUBLIC_KEY
         sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
