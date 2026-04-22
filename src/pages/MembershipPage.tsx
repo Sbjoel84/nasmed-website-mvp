@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import { applicationService } from "@/services/applicationService";
+import PaystackPop from "@paystack/inline-js";
+import MembershipCertificate from "@/components/MembershipCertificate";
 
 const nigerianStates = [
   "Abuja (FCT)", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -21,16 +23,39 @@ const benefits = [
   { icon: "🏅", title: "Recognition & Awards", desc: "Get recognised for your contributions through award programmes and public acknowledgements.", tags: ["Awards", "Recognition", "Profile"], gradient: "from-emerald-800 to-emerald-600" },
 ];
 
+// color themes: card / topBar / tag / price / button
+const planColors: Record<string, { card: string; topBar: string; tag: string; price: string; btn: string; check: string }> = {
+  "Student Membership":   { card: "border-purple-400 bg-purple-50/40 hover:border-purple-500 hover:shadow-xl hover:-translate-y-1",  topBar: "bg-purple-500",  tag: "bg-purple-100 text-purple-700",  price: "text-purple-600",  btn: "border-purple-400 text-purple-700 hover:bg-purple-500 hover:text-white",  check: "text-purple-500" },
+  "Associate Member":     { card: "border-blue-400 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1",                      topBar: "bg-blue-500",    tag: "bg-blue-100 text-blue-700",      price: "text-blue-600",    btn: "border-blue-400 text-blue-700 hover:bg-blue-500 hover:text-white",        check: "text-blue-500" },
+  "Individual Member":    { card: "border-nasmed-green hover:border-emerald-600 hover:shadow-xl hover:-translate-y-1",               topBar: "bg-nasmed-green",tag: "bg-green-100 text-nasmed-green", price: "text-nasmed-green",btn: "border-nasmed-green text-nasmed-green hover:bg-nasmed-green hover:text-white", check: "text-nasmed-green" },
+  "Fellow (FNASMED)":     { card: "border-amber-500 bg-amber-50/30 hover:border-amber-600 hover:shadow-xl hover:-translate-y-1",     topBar: "bg-gradient-to-r from-amber-400 to-yellow-500", tag: "bg-amber-100 text-amber-700", price: "text-amber-600", btn: "border-amber-500 text-amber-700 hover:bg-amber-500 hover:text-white", check: "text-amber-500" },
+  "International Membership": { card: "bg-nasmed-navy border-nasmed-mid-blue shadow-[0_20px_56px_rgba(26,58,110,0.3)]", topBar: "bg-gradient-to-r from-nasmed-green to-nasmed-mid-blue", tag: "bg-nasmed-green/25 text-nasmed-green-light", price: "text-nasmed-green-light", btn: "bg-nasmed-green border-nasmed-green text-white hover:bg-nasmed-green-light hover:border-nasmed-green-light", check: "text-nasmed-green-light" },
+};
+
 const membershipPlans = [
-  { tier: "Associate Member", tag: "STANDARD", price: "₦15,000", period: "/year", features: ["Member directory listing", "Newsletter access", "Annual conference discount", "Digital membership card"], featured: false },
-  { tier: "Professional Member", tag: "MOST POPULAR", price: "₦45,000", period: "/year", features: ["All Associate benefits", "Full journal access", "CPD programme access", "Research database access", "Voting rights"], featured: true },
-  { tier: "Fellow (FNASMED)", tag: "PREMIUM", price: "₦80,000", period: "/year", features: ["All Professional benefits", "FNASMED designation", "Leadership eligibility", "International liaison", "Priority event access", "Mentorship programme"], featured: false },
+  { tier: "Student Membership",      tag: "UNDERGRADUATE ONLY", price: "₦2,500",   period: " one-time", currency: "NGN", note: "For undergraduate students only. Admission letter required. Membership expires at end of programme.", features: ["Digital membership card", "Newsletter access", "Annual conference discount", "Student research resources", "Mentorship access", "Expires with programme duration"] },
+  { tier: "Associate Member",        tag: "ASSOCIATE",          price: "₦150,000", period: "/year",     currency: "NGN", note: "", features: ["Member directory listing", "Newsletter access", "Annual conference discount", "Digital membership card"] },
+  { tier: "Individual Member",       tag: "INDIVIDUAL",         price: "₦25,000",  period: "/year",     currency: "NGN", note: "", features: ["Full member directory listing", "Journal & publication access", "CPD programme access", "Voting rights", "Professional recognition", "Annual conference access"] },
+  { tier: "Fellow (FNASMED)",        tag: "PREMIUM",            price: "₦250,000", period: "/year",     currency: "NGN", note: "", features: ["All Individual Member benefits", "FNASMED designation", "Leadership eligibility", "International liaison", "Priority event access", "Mentorship programme"] },
+  { tier: "International Membership",tag: "INTERNATIONAL",      price: "$50",      period: "/year",     currency: "USD", note: "", features: ["Global member directory listing", "Digital membership card", "International journal access", "Online CPD access", "Cross-border networking", "FIMS affiliate benefits"] },
+];
+
+const otherPayments = [
+  { label: "Annual Dues", price: "₦25,000", desc: "Annual renewal dues for existing members", icon: "📅" },
+  { label: "Welfare Contribution", price: "Open Amount", desc: "Support fellow members through our welfare fund", icon: "🤝" },
+  { label: "Donations", price: "Open Amount", desc: "Contribute to NASMED's mission and programmes", icon: "💚" },
 ];
 
 export default function MembershipPage() {
   const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [certNumber] = useState(() => {
+    const yr = new Date().getFullYear().toString().slice(-2);
+    const seq = String(Math.floor(1000 + Math.random() * 9000));
+    return `NASMED/${yr}/${seq}`;
+  });
+  const [currentAppId, setCurrentAppId] = useState("");
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
@@ -77,7 +102,36 @@ export default function MembershipPage() {
 
     setIsSubmitting(true);
     try {
-      await applicationService.create({
+      const appId = "APP-" + Date.now();
+      setCurrentAppId(appId);
+
+      // Save to localStorage immediately — admin dashboard reads from here
+      const appEntry = {
+        id: appId,
+        name: formData.fullName,
+        email: formData.email,
+        prof: formData.category,
+        tier: formData.category,
+        state: formData.state,
+        date: new Date().toLocaleDateString("en-GB"),
+        status: "pending",
+        phone: formData.mobile,
+        altEmail: "",
+        qualifications: "",
+        workplace: "",
+        referee1: { name: formData.ref1Name, email: formData.ref1Email, mobile: formData.ref1Mobile },
+        referee2: { name: formData.ref2Name, email: formData.ref2Email, mobile: formData.ref2Mobile },
+        statement: formData.statement,
+        payment: "Pending",
+        paymentMethod: "",
+        paymentRef: "",
+        submitted: new Date().toLocaleDateString("en-GB"),
+      };
+      const existing: unknown[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
+      localStorage.setItem("nasmed_applications", JSON.stringify([appEntry, ...existing]));
+
+      // Best-effort Supabase sync — don't block on this
+      applicationService.create({
         full_name: formData.fullName,
         email: formData.email,
         phone: formData.mobile,
@@ -93,18 +147,81 @@ export default function MembershipPage() {
         referee2_email: formData.ref2Email || "",
         referee2_phone: formData.ref2Mobile || "",
         statement: formData.statement,
-      });
-      toast.success("Application submitted successfully! We will review and contact you soon.");
+      }).catch(() => {});
+
+      toast.success("Application submitted! Please complete your payment.");
       setStep(5);
-    } catch (error: any) {
-      console.error("Application error:", error);
-      const errorMessage = error?.message || "Failed to submit application. Please try again.";
-      const details = error?.details || error?.hint || "";
-      const fullMessage = details ? `${errorMessage}\n\nDetails: ${details}` : errorMessage;
-      toast.error(fullMessage);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const allPlans = [
+    ...membershipPlans,
+    ...otherPayments.map(o => ({ tier: o.label, price: o.price, period: "", currency: "NGN", tag: "", features: [], featured: false })),
+  ];
+  const planPrice = allPlans.find(p => p.tier === formData.category)?.price ?? "";
+
+  const planAmountKobo: Record<string, number> = {
+    "Student Membership": 250000,
+    "Associate Member": 15000000,
+    "Individual Member": 2500000,
+    "Professional Member": 4500000,
+    "Fellow (FNASMED)": 25000000,
+    "International Membership": 5000,   // $50 in USD cents
+    "Annual Dues": 2500000,
+  };
+
+  const saveTransaction = (ref: string, method: string, status: string) => {
+    try {
+      // Update application payment status
+      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
+      const idx = stored.findIndex(a => a.id === currentAppId);
+      if (idx >= 0) {
+        stored[idx].payment = status === "confirmed" ? "Paid" : "Transfer Pending";
+        stored[idx].paymentMethod = method;
+        stored[idx].paymentRef = ref;
+        localStorage.setItem("nasmed_applications", JSON.stringify(stored));
+      }
+      // Append transaction record
+      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
+      txns.unshift({
+        ref,
+        member: formData.fullName,
+        email: formData.email,
+        tier: formData.category,
+        amount: planPrice,
+        currency: formData.category === "International Membership" ? "USD" : "NGN",
+        method,
+        status,
+        date: new Date().toLocaleDateString("en-GB"),
+      });
+      localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
+    } catch { /* ignore */ }
+  };
+
+  const handlePaystack = () => {
+    const isInternational = formData.category === "International Membership";
+    const amount = planAmountKobo[formData.category];
+    if (!amount) { toast.error("Please select a valid membership plan."); return; }
+
+    const popup = new PaystackPop();
+    popup.newTransaction({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
+      email: formData.email,
+      amount,
+      currency: isInternational ? "USD" : "NGN",
+      metadata: { full_name: formData.fullName, membership_type: formData.category },
+      onSuccess: (transaction: Record<string, unknown>) => {
+        const ref = (transaction?.reference as string) || ("PSK-" + Date.now());
+        saveTransaction(ref, "Paystack", "confirmed");
+        toast.success("Payment successful! Your membership will be activated shortly.");
+        setStep(6);
+      },
+      onCancel: () => {
+        toast.error("Payment cancelled.");
+      },
+    });
   };
 
   const wordCount = formData.statement.trim().split(/\s+/).filter(w => w).length;
@@ -169,32 +286,66 @@ export default function MembershipPage() {
       {/* MEMBERSHIP PLANS */}
       <section className="py-20 px-6 md:px-12 max-w-[1280px] mx-auto">
         <div className="section-label">Choose Your Plan</div>
-        <h2 className="section-title">Membership Tiers</h2>
+        <h2 className="section-title">Membership Plans</h2>
         <p className="section-sub">Select a plan to begin your registration.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {membershipPlans.map((card) => (
-            <div key={card.tier} className={`rounded-2xl p-8 relative overflow-hidden transition-all border-[1.5px] ${card.featured ? "bg-nasmed-navy text-white border-nasmed-mid-blue shadow-[0_20px_56px_rgba(26,58,110,0.3)]" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:shadow-xl hover:-translate-y-1"}`}>
-              <div className={`absolute top-0 left-0 right-0 h-1 ${card.featured ? "bg-gradient-to-r from-nasmed-green to-nasmed-mid-blue" : card.tag === "STANDARD" ? "bg-nasmed-gray" : "bg-nasmed-mid-blue"}`} />
-              <span className={`text-[10px] font-bold tracking-[2px] uppercase py-1 px-2.5 rounded inline-block mb-4 ${card.featured ? "bg-nasmed-green/25 text-nasmed-green-light" : "bg-nasmed-gray-light text-nasmed-text-muted"}`}>{card.tag}</span>
-              <h3 className={`font-heading text-[22px] font-bold mb-2 ${card.featured ? "text-white" : ""}`}>{card.tier}</h3>
-              <div className={`text-[34px] font-bold my-2.5 ${card.featured ? "text-nasmed-green-light" : ""}`}>
-                {card.price}<span className="text-[13px] font-normal opacity-60">{card.period}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {membershipPlans.map((card) => {
+            const c = planColors[card.tier];
+            const isIntl = card.tier === "International Membership";
+            return (
+              <div key={card.tier} className={`rounded-2xl p-8 relative overflow-hidden transition-all border-[1.5px] ${c.card}`}>
+                <div className={`absolute top-0 left-0 right-0 h-1.5 ${c.topBar}`} />
+                <span className={`text-[10px] font-bold tracking-[2px] uppercase py-1 px-2.5 rounded inline-block mb-4 ${c.tag}`}>{card.tag}</span>
+                <h3 className={`font-heading text-[22px] font-bold mb-2 ${isIntl ? "text-white" : "text-nasmed-navy"}`}>{card.tier}</h3>
+                <div className={`text-[34px] font-bold my-2.5 ${c.price}`}>
+                  {card.price}<span className={`text-[13px] font-normal ${isIntl ? "text-white/60" : "text-nasmed-text-muted"}`}>{card.period}</span>
+                </div>
+                {card.note && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 leading-snug">
+                    ⚠ {card.note}
+                  </div>
+                )}
+                <ul className="list-none mb-7 flex flex-col gap-2.5">
+                  {card.features.map((f) => (
+                    <li key={f} className={`flex items-center gap-2.5 text-[13px] ${isIntl ? "text-white/75" : "text-nasmed-text-muted"}`}>
+                      <span className={`font-bold text-xs ${c.check}`}>✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => selectPlan(card.tier)}
+                  className={`block w-full text-center py-3 rounded-lg font-semibold text-[13px] transition-all border-2 cursor-pointer bg-transparent ${c.btn}`}
+                >
+                  Select Plan →
+                </button>
               </div>
-              <ul className="list-none mb-7 flex flex-col gap-2.5">
-                {card.features.map((f) => (
-                  <li key={f} className={`flex items-center gap-2.5 text-[13px] ${card.featured ? "text-white/75" : "text-nasmed-text-muted"}`}>
-                    <span className="text-nasmed-green-light font-bold text-xs">✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => selectPlan(card.tier)}
-                className={`block w-full text-center py-3 rounded-lg font-semibold text-[13px] no-underline transition-all border-2 cursor-pointer ${card.featured ? "bg-nasmed-green border-nasmed-green text-white hover:bg-nasmed-green-light hover:border-nasmed-green-light" : "border-nasmed-gray-light text-nasmed-navy hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue bg-transparent"}`}
-              >
-                {card.featured ? "Get Started →" : "Select Plan →"}
-              </button>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* OTHER PAYMENTS */}
+        <div className="mt-16">
+          <div className="section-label">Other Payments</div>
+          <h2 className="section-title">Additional Contributions</h2>
+          <p className="section-sub">Annual dues, welfare contributions, and donations for existing and prospective members.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-8">
+            {otherPayments.map((item) => (
+              <div key={item.label} className="bg-white border-[1.5px] border-nasmed-gray-light rounded-2xl p-7 hover:border-nasmed-mid-blue hover:shadow-xl hover:-translate-y-1 transition-all">
+                <div className="text-3xl mb-4">{item.icon}</div>
+                <h3 className="font-heading text-[19px] font-bold text-nasmed-navy mb-1">{item.label}</h3>
+                <div className="text-[28px] font-bold text-nasmed-mid-blue my-2">
+                  {item.price === "Open Amount" ? <span className="text-[18px] text-nasmed-text-muted font-medium italic">Enter amount</span> : item.price}
+                </div>
+                <p className="text-[13px] text-nasmed-text-muted mb-6 leading-relaxed">{item.desc}</p>
+                <button
+                  onClick={() => selectPlan(item.label)}
+                  className="block w-full text-center py-3 rounded-lg font-semibold text-[13px] transition-all border-2 cursor-pointer border-nasmed-gray-light text-nasmed-navy hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue bg-transparent"
+                >
+                  Pay Now →
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -238,48 +389,63 @@ export default function MembershipPage() {
 
             {/* Step Indicator */}
             <div className="flex items-center justify-center mb-6 gap-0">
-              {["Contact Details", "Qualifications", "Eligibility", "Review & Submit"].map((label, i) => (
+              {["Contact Details", "Qualifications", "Eligibility", "Review", "Payment"].map((label, i) => (
                 <div key={i} className="flex items-center">
-                  <div className="flex flex-col items-center gap-1.5 cursor-pointer" onClick={() => i + 1 <= step && setStep(i + 1)}>
+                  <div className="flex flex-col items-center gap-1.5 cursor-pointer" onClick={() => i + 1 <= step && i + 1 < 5 && setStep(i + 1)}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[15px] border-2 transition-all ${
                       i + 1 === step ? "bg-nasmed-mid-blue text-white border-nasmed-mid-blue shadow-[0_0_16px_rgba(42,100,180,0.4)]" :
                       i + 1 < step ? "bg-nasmed-green text-white border-nasmed-green" :
                       "bg-white/10 text-white/40 border-white/20"
                     }`}>
-                      {i + 1 < step ? "✓" : ["A", "B", "C", "✓"][i]}
+                      {i + 1 < step ? "✓" : ["A", "B", "C", "✓", "💳"][i]}
                     </div>
                     <span className={`text-xs font-semibold tracking-wide hidden md:block ${
                       i + 1 <= step ? "text-white" : "text-white/30"
                     }`}>{label}</span>
                   </div>
-                  {i < 3 && <div className={`flex-1 h-0.5 mx-2 mb-5 max-w-[80px] transition-colors ${i + 1 < step ? "bg-nasmed-green" : "bg-white/15"}`} />}
+                  {i < 4 && <div className={`flex-1 h-0.5 mx-2 mb-5 max-w-[60px] transition-colors ${i + 1 < step ? "bg-nasmed-green" : "bg-white/15"}`} />}
                 </div>
               ))}
             </div>
 
-            {step === 5 ? (
-              <div className="bg-white rounded-2xl shadow-2xl p-16 text-center">
-                <div className="text-6xl mb-5">✅</div>
-                <h2 className="font-heading text-nasmed-navy text-[28px] mb-3">Application Submitted!</h2>
-                <p className="text-nasmed-text-muted text-[15px] leading-relaxed max-w-[480px] mx-auto mb-7">
-                  Thank you <strong>{formData.fullName}</strong>. Your NASMED membership application has been received and will be reviewed within <strong>5-10 business days</strong>.
-                </p>
-                <p className="text-nasmed-text-muted text-[13px] mb-6">A confirmation will be sent to <strong>{formData.email}</strong>.</p>
-                <button onClick={closeForm} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all">
-                  Close
-                </button>
+            {step === 6 ? (
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-blue p-7">
+                  <span className="inline-block bg-nasmed-green/30 text-nasmed-green-light text-[11px] font-bold tracking-[2px] uppercase py-1 px-3 rounded mb-3">Application Received</span>
+                  <h3 className="text-white font-heading text-[22px] mb-1.5">🎉 Registration Complete!</h3>
+                  <p className="text-white/65 text-[13px]">Your application is pending admin review. Download or email your provisional certificate below.</p>
+                </div>
+                <div className="p-7 max-h-[55vh] overflow-y-auto flex flex-col items-center gap-5">
+                  <p className="text-[14px] text-nasmed-text-muted text-center leading-relaxed max-w-[500px]">
+                    Thank you <strong>{formData.fullName}</strong>. Your application has been submitted for review and you will receive a confirmation at <strong>{formData.email}</strong> within <strong>5–10 business days</strong>.
+                  </p>
+                  <div className="overflow-x-auto pb-2 w-full">
+                    <MembershipCertificate
+                      memberName={formData.fullName}
+                      certNumber={certNumber}
+                      date={new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}
+                      membershipType={formData.category}
+                      email={formData.email}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-end px-7 py-4 border-t border-nasmed-gray-light bg-nasmed-off-white">
+                  <button onClick={closeForm} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all">
+                    Close
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-blue p-7">
                   <span className="inline-block bg-nasmed-green/30 text-nasmed-green-light text-[11px] font-bold tracking-[2px] uppercase py-1 px-3 rounded mb-3">
-                    Section {["A", "B", "C", "Review"][step - 1]}
+                    {step === 5 ? "Payment" : `Section ${["A", "B", "C", "Review"][step - 1]}`}
                   </span>
                   <h3 className="text-white font-heading text-[22px] mb-1.5">
-                    {["Contact Details & General Statement", "Educational Qualifications", "Executive Eligibility", "Review & Submit"][step - 1]}
+                    {["Contact Details & General Statement", "Educational Qualifications", "Executive Eligibility", "Review & Submit", "Complete Your Payment"][step - 1]}
                   </h3>
                   <p className="text-white/65 text-[13px]">
-                    {["To be completed by all applicants", "Maximum 50 points in this category", "For Executive Pathway applicants", "Please review your information"][step - 1]}
+                    {["To be completed by all applicants", "Maximum 50 points in this category", "For Executive Pathway applicants", "Please review your information", "Choose a payment method to activate your membership"][step - 1]}
                   </p>
                 </div>
 
@@ -311,11 +477,44 @@ export default function MembershipPage() {
                           <label className="text-[13px] font-semibold text-nasmed-navy">Membership Category <span className="text-red-600">*</span></label>
                           <select value={formData.category} onChange={e => updateField('category', e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors">
                             <option value="">— Select Category —</option>
+                            <option>Student Membership</option>
                             <option>Associate Member</option>
-                            <option>Professional Member</option>
+                            <option>Individual Member</option>
                             <option>Fellow (FNASMED)</option>
-                            <option>Honorary Member</option>
+                            <option>International Membership</option>
                           </select>
+
+                          {/* Student-specific fields */}
+                          {formData.category === "Student Membership" && (
+                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg space-y-4">
+                              <p className="text-[12px] text-yellow-800 font-semibold">🎓 Student Membership is for undergraduate programmes only. Postgraduate or other students must register as Individual Member. Your membership expires at the end of your programme. An admission letter is required.</p>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-semibold text-nasmed-navy">Institution / University <span className="text-red-600">*</span></label>
+                                <input type="text" value={(formData as any).institution || ""} onChange={e => updateField('institution', e.target.value)} placeholder="e.g. University of Lagos" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-semibold text-nasmed-navy">Undergraduate Programme <span className="text-red-600">*</span></label>
+                                <input type="text" value={(formData as any).programme || ""} onChange={e => updateField('programme', e.target.value)} placeholder="e.g. MBBS, BSc Sports Science, BPharm" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-semibold text-nasmed-navy">Expected Graduation Date <span className="text-red-600">*</span></label>
+                                <input type="month" value={(formData as any).graduationDate || ""} onChange={e => updateField('graduationDate', e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <label className="text-[13px] font-semibold text-nasmed-navy">Admission Letter <span className="text-red-600">*</span></label>
+                                <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${(formData as any).admissionLetter ? "border-yellow-400 bg-yellow-50" : "border-nasmed-gray-light hover:border-yellow-400"}`}>
+                                  <span className="text-xl">{(formData as any).admissionLetter ? "📄" : "📎"}</span>
+                                  <div className="flex-1 min-w-0">
+                                    {(formData as any).admissionLetter
+                                      ? <p className="text-sm font-semibold text-nasmed-navy truncate">{(formData as any).admissionLetter}</p>
+                                      : <><p className="text-sm text-nasmed-text-muted">Upload admission letter (JPG, PNG, PDF)</p><p className="text-xs text-nasmed-text-muted">Must clearly show your name, institution & programme</p></>
+                                    }
+                                  </div>
+                                  <input type="file" accept=".jpg,.jpeg,.png,.pdf" className="hidden" onChange={e => updateField('admissionLetter', e.target.files?.[0]?.name || "")} />
+                                </label>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -411,22 +610,119 @@ export default function MembershipPage() {
                       </div>
                     </div>
                   )}
+
+                  {step === 5 && (
+                    <div className="space-y-6">
+                      {planPrice && (
+                        <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4 flex items-center justify-between">
+                          <span className="text-[13px] text-nasmed-text-muted">Amount Due ({formData.category})</span>
+                          <span className="text-[22px] font-bold text-nasmed-navy">{planPrice}<span className="text-[13px] font-normal text-nasmed-gray">/year</span></span>
+                        </div>
+                      )}
+
+                      {/* Bank Transfer */}
+                      <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
+                        <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
+                          <span className="text-[18px]">🏦</span>
+                          <span className="font-bold text-[14px] text-nasmed-navy">Direct Bank Transfer</span>
+                        </div>
+                        <div className="p-5 space-y-4">
+                          <p className="text-[13px] text-nasmed-text-muted leading-relaxed">Transfer the membership fee directly to one of the NASMED accounts below, then send your proof of payment to <strong>info@nasmed.org</strong>.</p>
+
+                          {/* Naira Account */}
+                          <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-0.5 rounded-full">Naira Account</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[13px]">
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p>
+                                <p className="font-bold text-nasmed-navy">NASMED</p>
+                              </div>
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Number</p>
+                                <p className="font-bold text-nasmed-navy tracking-widest">0227297914</p>
+                              </div>
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p>
+                                <p className="font-bold text-nasmed-navy">Union Bank of Nigeria</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dollar Account */}
+                          <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full">Dollar Account</span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[13px]">
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p>
+                                <p className="font-bold text-nasmed-navy">NASMED</p>
+                              </div>
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Number</p>
+                                <p className="font-bold text-nasmed-navy tracking-widest">0227342474</p>
+                              </div>
+                              <div>
+                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p>
+                                <p className="font-bold text-nasmed-navy">Union Bank of Nigeria</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Paystack */}
+                      <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
+                        <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
+                          <span className="text-[18px]">💳</span>
+                          <span className="font-bold text-[14px] text-nasmed-navy">Pay Online via Paystack</span>
+                        </div>
+                        <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                          <p className="text-[13px] text-nasmed-text-muted leading-relaxed flex-1">Pay securely online using your debit/credit card, bank transfer, or USSD via Paystack — Nigeria's trusted payment gateway.</p>
+                          <button
+                            type="button"
+                            onClick={handlePaystack}
+                            className="shrink-0 bg-[#0BA4DB] hover:bg-[#0993c5] text-white font-semibold text-[13px] py-2.5 px-6 rounded-lg transition-colors border-none cursor-pointer"
+                          >
+                            Pay with Paystack →
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-[12px] text-amber-800 leading-relaxed">
+                        <strong>Note:</strong> After completing your payment, please send proof of payment (receipt or screenshot) along with your full name to <strong>info@nasmed.org</strong>. Your membership will be activated once payment is confirmed.
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
                 {/* Nav buttons */}
                 <div className="flex items-center justify-between p-5 bg-nasmed-off-white border-t border-nasmed-gray-light">
-                  {step > 1 ? (
+                  {step > 1 && step < 5 ? (
                     <button onClick={() => setStep(step - 1)} className="bg-transparent text-nasmed-text-muted border-[1.5px] border-nasmed-gray-light py-3 px-6 rounded-lg text-sm font-semibold cursor-pointer hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue transition-all">← Back</button>
                   ) : <div />}
                   {step < 4 ? (
                     <button onClick={() => setStep(step + 1)} className="bg-nasmed-mid-blue text-white border-none py-3 px-7 rounded-lg text-sm font-semibold cursor-pointer hover:bg-accent transition-all">
                       Next →
                     </button>
-                  ) : (
+                  ) : step === 4 ? (
                     <button onClick={handleSubmit} disabled={isSubmitting} className="bg-nasmed-green text-white border-none py-3.5 px-11 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       {isSubmitting ? "Submitting..." : "Submit Application →"}
                     </button>
-                  )}
+                  ) : step === 5 ? (
+                    <button
+                      onClick={() => {
+                        saveTransaction("BNK-" + Date.now(), "Bank Transfer", "awaiting_confirmation");
+                        setStep(6);
+                      }}
+                      className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                    >
+                      I've Completed Payment →
+                    </button>
+                  ) : null}
                 </div>
               </div>
             )}

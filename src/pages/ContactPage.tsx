@@ -11,7 +11,7 @@ export default function ContactPage() {
     setTimeout(() => {
       setSending(false);
       setSuccess(true);
-      toast.success("Message sent! We will respond within 2 business days.");
+      toast.success("Message sent! We will respond within 5 business days.");
     }, 1400);
   };
 

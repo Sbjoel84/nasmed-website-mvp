@@ -7,7 +7,7 @@ import hero4 from "@/assets/hero-4.jpg";
 import hero5 from "@/assets/hero-5.jpg";
 import swearingIn from "@/assets/swearing-in.jpg";
 import cacHandover from "@/assets/cac-handover.jpg";
-import aboutImg from "@/assets/about-img.jpg";
+import aboutImg from "@/assets/cac-handover.jpg";
 
 const heroSlides = [
   { image: hero1, title: "Advancing <em>Sports Medicine</em> Across Nigeria", sub: "The premier professional body uniting physicians, physiotherapists, scientists and allied health professionals dedicated to sports and exercise medicine excellence." },
@@ -61,7 +61,7 @@ export default function HomePage() {
         <div className="relative z-[2] max-w-[780px] px-6 md:px-12" style={{ animation: 'heroUp 1.2s ease both' }}>
           <div className="inline-flex items-center gap-2 bg-nasmed-green/20 border border-nasmed-green/35 text-nasmed-green-light py-1.5 px-4 rounded-full text-xs font-semibold tracking-[1.5px] uppercase mb-7">
             <span className="text-[8px]" style={{ animation: 'pulse-dot 2s infinite' }}>●</span>
-            Established 1988
+            Established 1994
           </div>
           <h1
             className="font-heading text-white font-bold leading-[1.12] mb-6 [&>em]:text-nasmed-green-light [&>em]:not-italic"

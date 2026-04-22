@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import authService, { AuthUser } from '../lib/authService';
 
@@ -22,14 +22,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const initializeAuth = async () => {
-      const currentUser = await authService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
+      try {
+        // getSession reads localStorage — fast, no network call
         const session = await authService.getSession();
-        setSession(session);
+        if (session && mounted) {
+          setSession(session);
+          // Only make the network call if a session already exists
+          const currentUser = await authService.getCurrentUser();
+          if (mounted) setUser(currentUser);
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     initializeAuth();
@@ -37,15 +44,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
-        setSession(session);
+        if (mounted) {
+          setUser(currentUser);
+          setSession(session);
+        }
       } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setSession(null);
+        if (mounted) {
+          setUser(null);
+          setSession(null);
+        }
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import swearingIn from "@/assets/swearing-in.jpg";
 import cacHandover from "@/assets/cac-handover.jpg";
+import newBoardInaugurated from "@/assets/New National Executive Board Inaugurated.jpg";
 import presidentPhoto from "@/assets/president-photo.jpg";
 
 const newsItems = [
@@ -25,8 +26,8 @@ const upcomingEvents = [
 
 const latestNews = [
   { cat: "ANNUAL CONFERENCE", title: "NASMED 2024 National Conference – Abuja, September",   desc: "Join over 500 sports medicine professionals for two days of world-class research presentations and workshops.",  date: "14 Jun 2024", img: swearingIn   },
-  { cat: "GOVERNANCE",        title: "New National Executive Board Inaugurated",              desc: "NASMED's newly elected board takes office and outlines goals for 2024–2026.",                                    date: "20 Jun 2024", img: cacHandover  },
-  { cat: "MILESTONES",        title: "CAC Certificate of Incorporation Received",             desc: "NASMED receives its Certificate of Incorporation from the Corporate Affairs Commission (CAC), a landmark step.", date: "01 Jul 2024", img: presidentPhoto },
+  { cat: "GOVERNANCE",        title: "New National Executive Board Inaugurated",              desc: "NASMED's newly elected board takes office and outlines goals for 2024–2026.",                                    date: "20 Jun 2024", img: newBoardInaugurated  },
+  { cat: "MILESTONES",        title: "CAC Certificate of Incorporation Received",             desc: "NASMED receives its Certificate of Incorporation from the Corporate Affairs Commission (CAC), a landmark step.", date: "01 Jul 2024", img: cacHandover },
 ];
 
 const inp = "py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue w-full";

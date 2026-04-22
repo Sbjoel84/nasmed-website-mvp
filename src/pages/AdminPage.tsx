@@ -79,20 +79,56 @@ const DEMO_APPS = [
 ];
 
 const DEMO_MEMBERS_INIT = [
-  { id: "NAS-0001", name: "Prof. Adamu Ibrahim", username: "adamu.ibrahim", password: "nasmed2024", prof: "Orthopaedic Surgeon", tier: "Fellow (FNASMED)", state: "Abuja (FCT)", joined: "Jan 1988", status: "active", position: "President", mustChange: true },
-  { id: "NAS-0002", name: "Dr. Folake Adeyemi", username: "folake.adeyemi", password: "nasmed2024", prof: "Exercise Physiologist", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Mar 1990", status: "active", position: "Vice President", mustChange: true },
-  { id: "NAS-0003", name: "Dr. Chukwuma Obi", username: "chukwuma.obi", password: "nasmed2024", prof: "Sports Medicine", tier: "Professional Member", state: "Enugu", joined: "Jul 2005", status: "active", position: "General Secretary", mustChange: false },
-  { id: "NAS-0004", name: "Dr. B.O. Onabowale", username: "bo.onabowale", password: "nasmed94!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 1994", status: "active", position: "President", mustChange: true },
-  { id: "NAS-0005", name: "Dr. Senbanjo", username: "senbanjo", password: "nasmed94!", prof: "Medical Doctor", tier: "Professional Member", state: "Lagos", joined: "Jan 1994", status: "active", position: "1st Vice President", mustChange: true },
-  { id: "NAS-0006", name: "Dr. Nana Yesufu", username: "nana.yesufu", password: "nasmed94!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 1994", status: "active", position: "3rd Vice President", mustChange: true },
+  { id: "NASMED/24/0001", name: "Prof. Olatunde Oyebisi Makanju", username: "olatunde.makanju", email: "olatunde.makanju@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Immediate Past President", mustChange: true },
+  { id: "NASMED/24/0002", name: "Dr. Obinnaya Francis Udugwu", username: "obinnaya.udugwu", email: "obinnaya.udugwu@uniport.edu.ng", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Rivers", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0003", name: "Dr. Kweku Tandoh", username: "tkweks", email: "tkweks@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0004", name: "Dr. Jimi Osinaike", username: "jimisayoosinaike", email: "jimisayoosinaike@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0005", name: "Prof. Kayode Oke", username: "kayode.oke", email: "kayode.oke@uniben.edu", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Edo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0006", name: "Dr. Effi Ita Usen", username: "eleknigerialtd", email: "eleknigerialtd@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Akwa Ibom", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0007", name: "Dr. Solomon Omiken Okoro", username: "omisokoro", email: "omisokoro@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0008", name: "Dr. Habu Dahiru", username: "drhabudahiru54", email: "drhabudahiru54@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0009", name: "Dr. John Babatunde Akinbinu", username: "abembeinfo", email: "abembeinfo@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0010", name: "Dr. Moses Aghedo", username: "aghedomoses23", email: "aghedomoses23@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Edo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0011", name: "Prof. Temitope Oluwagbenga Alonge", username: "temitopealonge", email: "temitopealonge@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Oyo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0012", name: "Dr. Mazeed Alaba Oloko", username: "mazeedoloko", email: "mazeedoloko@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0013", name: "Mrs. Abimbola Olasumbo Olasupo", username: "abimbolaolasupo68", email: "abimbolaolasupo68@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0014", name: "Dr. Opemipo Ade-Akingboye", username: "adeakingboyeot", email: "adeakingboyeot@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0015", name: "Dr. Michael Kayode", username: "drseyi.kayode", email: "drseyi.kayode@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0016", name: "Dr. Sikuade Oladimeji Jagun", username: "sjagun42", email: "sjagun42@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0017", name: "Dr. Tijjani Bashir Ibrahim", username: "teejaybash54", email: "teejaybash54@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Kano", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0018", name: "Pharm. Oluwafemi Ayorinde", username: "joayorinde2002", email: "joayorinde2002@gmail.com", password: "nasmed2024!", prof: "Pharmacist", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0019", name: "Dr. Abdulkadir Musa Mu'azu", username: "taniyare43", email: "taniyare43@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0020", name: "Dr. Kolawole Mustapha", username: "mustaphaphysiotherapy", email: "mustaphaphysiotherapy@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0021", name: "Dr. Kenechukwu John Anieze", username: "kerenke25", email: "kerenke25@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Enugu", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0022", name: "Dr. Marian Mkpo Odu", username: "mixidoo", email: "mixidoo@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Akwa Ibom", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0023", name: "Dr. Akinwumi Kolawole Amao", username: "akin.amao", email: "akin.amao@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0024", name: "PT. Oluwabunmi Michael Bamidele", username: "michealbam11", email: "michealbam11@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0025", name: "Dr. Niran Adeniji", username: "niranadeadeniji", email: "niranadeadeniji@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0026", name: "Dr. Ummukulthoum Bakare", username: "ummubakare", email: "ummubakare@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0027", name: "Dr. Olajide Joseph Adebola", username: "oladebola", email: "oladebola@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "President", mustChange: true },
+  { id: "NASMED/24/0028", name: "Prof. Kenneth Anugweje", username: "kanugweje", email: "kanugweje@hotmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Rivers", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0029", name: "Dr. Olanrewaju Olabode Glover", username: "lanreglover2005", email: "lanreglover2005@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0030", name: "Mr. Iyanuoluwa Alonge", username: "iyanuoluwaalonge", email: "iyanuoluwaalonge@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Oyo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0031", name: "Dr. Akin George", username: "akinsg2000", email: "akinsg2000@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0032", name: "Dr. Henry Chidebere Uche", username: "hennolimit", email: "hennolimit@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Anambra", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0033", name: "Dr. Adebukola Olurotimi Bojuwoye", username: "jacobojuwoye", email: "jacobojuwoye@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "1st Vice President", mustChange: true },
+  { id: "NASMED/24/0034", name: "Mrs. Monica Peter Ekpeyong", username: "emisca2010", email: "emisca2010@yahoo.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Cross River", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0035", name: "Dr. Sunday Baderinwa Adewale", username: "drbadewale", email: "drbadewale@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0036", name: "Dr. Sunday Onimisi Salami", username: "sunnysalami", email: "sunnysalami@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Kogi", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0037", name: "PT. Judith Amaka Enebe", username: "amakaenebe14", email: "amakaenebe14@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Treasurer", mustChange: true },
+  { id: "NASMED/24/0038", name: "Dr. Phillip Alexander", username: "alexanderphilipomede", email: "alexanderphilipomede@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Delta", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0039", name: "Dr. Francis Onyebuchi Okanu", username: "okanuf", email: "okanuf@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Imo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0040", name: "PT. Ekundayo Ogunkunle", username: "ekundayoogunkunle", email: "ekundayoogunkunle@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0041", name: "PT. Nnenna Ngozi Dike", username: "ngozinnenna78", email: "ngozinnenna78@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Enugu", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
+  { id: "NASMED/24/0042", name: "Mrs. Salamatu Suleiman Kpautagi", username: "salamatukpautagi", email: "salamatukpautagi@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Plateau", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
 ];
 
 const DEMO_PUBLICATIONS = [
-  { id: "PUB-001", title: "NASMED Clinical Guidelines for Sports Injury Management", type: "Guidelines", date: "Dec 2024", downloads: 234, status: "published" },
-  { id: "PUB-002", title: "Quarterly Sports Medicine Journal - Q4 2024", type: "Journal", date: "Oct 2024", downloads: 567, status: "published" },
-  { id: "PUB-003", title: "Concussion Management Protocol for Nigerian Athletes", type: "Protocol", date: "Sep 2024", downloads: 892, status: "published" },
-  { id: "PUB-004", title: "Exercise Prescription for Chronic Disease Management", type: "Research", date: "Aug 2024", downloads: 445, status: "published" },
-  { id: "PUB-005", title: "NASMED Newsletter - January 2025", type: "Newsletter", date: "Jan 2025", downloads: 123, status: "draft" },
+  { id: "PUB-001", title: "NASMED Clinical Guidelines for Sports Injury Management", type: "Guidelines", date: "Dec 2024", downloads: 234, status: "published", access: "subscribed", price: "", fileName: "" },
+  { id: "PUB-002", title: "Quarterly Sports Medicine Journal - Q4 2024", type: "Journal", date: "Oct 2024", downloads: 567, status: "published", access: "paid", price: "₦2,500", fileName: "" },
+  { id: "PUB-003", title: "Concussion Management Protocol for Nigerian Athletes", type: "Protocol", date: "Sep 2024", downloads: 892, status: "published", access: "free", price: "", fileName: "" },
+  { id: "PUB-004", title: "Exercise Prescription for Chronic Disease Management", type: "Research", date: "Aug 2024", downloads: 445, status: "published", access: "subscribed", price: "", fileName: "" },
+  { id: "PUB-005", title: "NASMED Newsletter - January 2025", type: "Newsletter", date: "Jan 2025", downloads: 123, status: "draft", access: "free", price: "", fileName: "" },
 ];
 
 const DEMO_SUBSCRIPTIONS = [
@@ -120,13 +156,29 @@ type App = typeof DEMO_APPS[0];
 type Publication = typeof DEMO_PUBLICATIONS[0];
 type Subscription = typeof DEMO_SUBSCRIPTIONS[0];
 
+const LOCAL_ADMIN_PASSWORD = "nasmed@admin2024";
+
 export default function AdminPage() {
   const { user, loading, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
 
+  // Local admin auth fallback (used when Supabase auth is unavailable)
+  const [localAuth, setLocalAuth] = useState(() => sessionStorage.getItem("nasmed_admin") === "1");
+  const [localPw, setLocalPw] = useState("");
+  const [localErr, setLocalErr] = useState("");
+
   // All hooks must be declared before any conditional returns (React rules of hooks)
   const [activeSection, setActiveSection] = useState("dashboard");
-  const [applications, setApplications] = useState(DEMO_APPS);
+  const [applications, setApplications] = useState<typeof DEMO_APPS[0][]>(() => {
+    try {
+      const stored: typeof DEMO_APPS[0][] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
+      const storedIds = new Set(stored.map(a => a.id));
+      const demo = DEMO_APPS.filter(a => !storedIds.has(a.id));
+      return [...stored, ...demo];
+    } catch {
+      return [...DEMO_APPS];
+    }
+  });
   const [members, setMembers] = useState(DEMO_MEMBERS_INIT);
   const [publications, setPublications] = useState(DEMO_PUBLICATIONS);
   const [subscriptions, setSubscriptions] = useState(DEMO_SUBSCRIPTIONS);
@@ -143,27 +195,65 @@ export default function AdminPage() {
   const [pubTitle, setPubTitle] = useState("");
   const [pubType, setPubType] = useState("Guidelines");
   const [pubContent, setPubContent] = useState("");
+  const [pubAccess, setPubAccess] = useState("free");
+  const [pubPrice, setPubPrice] = useState("");
+  const [pubFile, setPubFile] = useState<File | null>(null);
   const [editMember, setEditMember] = useState<typeof DEMO_MEMBERS_INIT[0] | null>(null);
+  const [transactions, setTransactions] = useState<Record<string, unknown>[]>(() => {
+    try { return JSON.parse(localStorage.getItem("nasmed_transactions") || "[]"); } catch { return []; }
+  });
 
-  // Redirect if not authenticated or not admin
+  const canAccess = localAuth || (!loading && isAdmin);
+
+  // Show local login form if not authenticated via Supabase and not locally authenticated
+  if (!canAccess && !loading) {
+    const handleLocalLogin = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (localPw === LOCAL_ADMIN_PASSWORD) {
+        sessionStorage.setItem("nasmed_admin", "1");
+        setLocalAuth(true);
+        setLocalErr("");
+      } else {
+        setLocalErr("Incorrect password. Please try again.");
+      }
+    };
+
+    return (
+      <div className="pt-[78px] min-h-screen bg-nasmed-off-white flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-12 w-full max-w-[400px] shadow-xl text-center">
+          <div className="text-4xl mb-4">🔐</div>
+          <h2 className="font-heading text-nasmed-navy text-[24px] mb-1">Admin Portal</h2>
+          <p className="text-nasmed-text-muted text-sm mb-7">Enter your admin password to continue.</p>
+          <form onSubmit={handleLocalLogin} className="flex flex-col gap-4">
+            <input
+              type="password"
+              value={localPw}
+              onChange={e => setLocalPw(e.target.value)}
+              placeholder="Admin password"
+              className="py-3 px-4 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+              autoFocus
+            />
+            {localErr && <p className="text-red-500 text-xs">{localErr}</p>}
+            <button type="submit" className="bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all">
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return <LoadingScreen message="Verifying admin access..." size="medium" />;
   }
 
-  if (!user) {
-    navigate("/member-login");
-    return null;
-  }
-
-  if (!isAdmin) {
+  if (!canAccess) {
     return (
       <div className="pt-[78px] min-h-screen bg-nasmed-off-white flex items-center justify-center">
         <div className="bg-white rounded-2xl p-12 w-full max-w-[440px] shadow-xl text-center">
           <div className="text-4xl mb-4">🔒</div>
           <h2 className="font-heading text-nasmed-navy text-[26px] mb-2">Access Denied</h2>
-          <p className="text-nasmed-text-muted text-sm mb-6">You do not have admin privileges. Only administrators can access this portal.</p>
-
-          {/* Debug Info */}
+          <p className="text-nasmed-text-muted text-sm mb-6">You do not have admin privileges.</p>
           <div className="bg-gray-50 p-4 rounded-lg mb-4 text-left text-xs">
             <strong>Debug Info:</strong><br/>
             Email: {user?.email}<br/>
@@ -184,8 +274,15 @@ export default function AdminPage() {
   }
 
   const handleAction = (id: string, action: string) => {
-    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: action === "approve" ? "approved" : "rejected" } : a));
-    if (viewApp?.id === id) setViewApp(prev => prev ? { ...prev, status: action === "approve" ? "approved" : "rejected" } : null);
+    const newStatus = action === "approve" ? "approved" : "rejected";
+    setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    if (viewApp?.id === id) setViewApp(prev => prev ? { ...prev, status: newStatus } : null);
+    // Sync back to localStorage so the status persists
+    try {
+      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
+      const updated = stored.map(a => a.id === id ? { ...a, status: newStatus } : a);
+      localStorage.setItem("nasmed_applications", JSON.stringify(updated));
+    } catch { /* ignore */ }
     toast.success(action === "approve" ? "Application approved & member notified!" : "Application rejected & member notified.");
   };
 
@@ -223,6 +320,7 @@ export default function AdminPage() {
 
   const addPublication = () => {
     if (!pubTitle) { toast.error("Please enter a title."); return; }
+    if (pubAccess === "paid" && !pubPrice) { toast.error("Please enter a price for paid publications."); return; }
     const p: Publication = {
       id: "PUB-" + (publications.length + 1).toString().padStart(3, "0"),
       title: pubTitle,
@@ -230,10 +328,13 @@ export default function AdminPage() {
       date: new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
       downloads: 0,
       status: "published",
+      access: pubAccess,
+      price: pubAccess === "paid" ? pubPrice : "",
+      fileName: pubFile ? pubFile.name : "",
     };
     setPublications(prev => [p, ...prev]);
     toast.success(`Publication "${p.title}" created!`);
-    setPubTitle(""); setPubContent("");
+    setPubTitle(""); setPubContent(""); setPubPrice(""); setPubFile(null); setPubAccess("free");
   };
 
   const deletePublication = (id: string) => {
@@ -252,6 +353,9 @@ export default function AdminPage() {
       expired: "bg-red-500/15 text-red-600",
       published: "bg-nasmed-green/15 text-nasmed-green",
       draft: "bg-amber-500/15 text-amber-600",
+      free: "bg-emerald-500/15 text-emerald-600",
+      paid: "bg-amber-500/15 text-amber-600",
+      subscribed: "bg-nasmed-mid-blue/10 text-nasmed-mid-blue",
     };
     return <span className={`py-1 px-2.5 rounded-full text-[11px] font-bold tracking-wide capitalize ${map[s] || ""}`}>{s}</span>;
   };
@@ -265,6 +369,7 @@ export default function AdminPage() {
     { key: "members", icon: "👥", label: "Members" },
     { key: "publications", icon: "📚", label: "Publications" },
     { key: "subscriptions", icon: "💳", label: "Subscriptions" },
+    { key: "transactions", icon: "💰", label: "Transactions" },
     { key: "credentials", icon: "🔑", label: "Credentials" },
   ];
 
@@ -303,7 +408,7 @@ export default function AdminPage() {
               </li>
             ))}
             <li>
-              <button onClick={signOut} className="w-full flex items-center gap-2.5 py-2.5 px-6 text-white/65 text-[13.5px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white mt-8">
+              <button onClick={() => { sessionStorage.removeItem("nasmed_admin"); setLocalAuth(false); if (user) signOut(); }} className="w-full flex items-center gap-2.5 py-2.5 px-6 text-white/65 text-[13.5px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white mt-8">
                 <span className="text-base w-5 text-center">🚪</span>Sign Out
               </button>
             </li>
@@ -388,16 +493,20 @@ export default function AdminPage() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead><tr>{["Name", "Email", "Profession", "Tier", "State", "Date", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                    <thead><tr>{["Name", "Email", "Tier", "State", "Date", "Payment", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(applications, ["name", "email", "prof"]).map(a => (
+                      {filterRows(applications, ["name", "email", "prof", "tier"]).map(a => (
                         <tr key={a.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[13px] font-semibold">{a.name}</td>
                           <td className="py-3 px-3 text-[13px]">{a.email}</td>
-                          <td className="py-3 px-3 text-[13px]">{a.prof}</td>
                           <td className="py-3 px-3 text-[13px]">{a.tier}</td>
                           <td className="py-3 px-3 text-[13px]">{a.state}</td>
                           <td className="py-3 px-3 text-[13px]">{a.date}</td>
+                          <td className="py-3 px-3">
+                            <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${(a as Record<string, unknown>).payment === "Paid" ? "bg-nasmed-green/15 text-nasmed-green" : (a as Record<string, unknown>).payment === "Transfer Pending" ? "bg-amber-500/15 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
+                              {String((a as Record<string, unknown>).payment || "Pending")}
+                            </span>
+                          </td>
                           <td className="py-3 px-3">{statusBadge(a.status)}</td>
                           <td className="py-3 px-3">
                             <div className="flex gap-1.5 items-center">
@@ -484,6 +593,53 @@ export default function AdminPage() {
                     <label className="text-[13px] font-semibold text-nasmed-navy">Description / Abstract</label>
                     <textarea value={pubContent} onChange={e => setPubContent(e.target.value)} placeholder="Enter description or abstract..." className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue min-h-[100px]" />
                   </div>
+
+                  {/* Document Upload */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Document / File</label>
+                    <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${pubFile ? "border-nasmed-green bg-nasmed-green/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:bg-nasmed-off-white"}`}>
+                      <span className="text-xl">{pubFile ? "📄" : "📁"}</span>
+                      <div className="flex-1 min-w-0">
+                        {pubFile
+                          ? <><p className="text-sm font-semibold text-nasmed-navy truncate">{pubFile.name}</p><p className="text-xs text-nasmed-text-muted">{(pubFile.size / 1024).toFixed(0)} KB</p></>
+                          : <><p className="text-sm text-nasmed-text-muted">Click to upload PDF, Word, or other document</p><p className="text-xs text-nasmed-text-muted">PDF, DOC, DOCX, PPT up to 50MB</p></>
+                        }
+                      </div>
+                      {pubFile && <button type="button" onClick={e => { e.preventDefault(); setPubFile(null); }} className="text-red-400 hover:text-red-600 text-lg leading-none border-none bg-transparent cursor-pointer">✕</button>}
+                      <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="hidden" onChange={e => setPubFile(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+
+                  {/* Access Type */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Access Type <span className="text-red-600">*</span></label>
+                    <div className="flex gap-3 flex-wrap">
+                      {[
+                        { value: "free", label: "Free", icon: "🔓", desc: "Anyone can access" },
+                        { value: "paid", label: "Paid", icon: "💳", desc: "One-time purchase" },
+                        { value: "subscribed", label: "Members Only", icon: "🔐", desc: "Active subscribers" },
+                      ].map(opt => (
+                        <label key={opt.value} className={`flex-1 min-w-[140px] flex items-start gap-2.5 p-3.5 rounded-lg border-[1.5px] cursor-pointer transition-all ${pubAccess === opt.value ? "border-nasmed-mid-blue bg-nasmed-mid-blue/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue/40"}`}>
+                          <input type="radio" name="pubAccess" value={opt.value} checked={pubAccess === opt.value} onChange={() => setPubAccess(opt.value)} className="mt-0.5 accent-nasmed-mid-blue" />
+                          <div>
+                            <div className="text-[13px] font-semibold text-nasmed-navy">{opt.icon} {opt.label}</div>
+                            <div className="text-[11px] text-nasmed-text-muted">{opt.desc}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price — only shown for paid */}
+                  {pubAccess === "paid" && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[13px] font-semibold text-nasmed-navy">Price <span className="text-red-600">*</span></label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-nasmed-text-muted text-sm font-medium">₦</span>
+                        <input type="text" value={pubPrice} onChange={e => setPubPrice(e.target.value)} placeholder="e.g. 2,500" className="w-full py-2.5 pl-8 pr-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button onClick={addPublication} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-5">Publish →</button>
               </div>
@@ -496,13 +652,16 @@ export default function AdminPage() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
-                    <thead><tr>{["ID", "Title", "Type", "Date", "Downloads", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                    <thead><tr>{["ID", "Title", "Type", "Access", "Price", "File", "Date", "Downloads", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(publications, ["title", "type"]).map(p => (
+                      {filterRows(publications, ["title", "type", "access"]).map(p => (
                         <tr key={p.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[11px] font-mono">{p.id}</td>
-                          <td className="py-3 px-3 text-[13px] font-semibold max-w-[200px] truncate">{p.title}</td>
+                          <td className="py-3 px-3 text-[13px] font-semibold max-w-[180px] truncate">{p.title}</td>
                           <td className="py-3 px-3 text-[13px]">{p.type}</td>
+                          <td className="py-3 px-3">{statusBadge(p.access)}</td>
+                          <td className="py-3 px-3 text-[13px] font-medium">{p.access === "paid" && p.price ? `₦${p.price}` : "—"}</td>
+                          <td className="py-3 px-3 text-[12px] max-w-[120px] truncate">{p.fileName ? <span title={p.fileName} className="flex items-center gap-1 text-nasmed-mid-blue">📄 {p.fileName}</span> : <span className="text-nasmed-text-muted">—</span>}</td>
                           <td className="py-3 px-3 text-[13px]">{p.date}</td>
                           <td className="py-3 px-3 text-[13px]">{p.downloads}</td>
                           <td className="py-3 px-3">{statusBadge(p.status)}</td>
@@ -572,6 +731,85 @@ export default function AdminPage() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Transactions ── */}
+          {activeSection === "transactions" && (
+            <>
+              <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Transactions</h2>
+              <p className="text-nasmed-text-muted text-sm mb-7">All payment records from membership registrations. Bank transfer payments are settled directly to the accounts below.</p>
+
+              {/* Bank Account Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                <div className="bg-white rounded-[14px] p-6 shadow-sm border-t-4 border-nasmed-mid-blue">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-1 rounded-full">Naira Account (NGN)</span>
+                  </div>
+                  <div className="space-y-3 text-[14px]">
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Account Name</span><span className="font-bold text-nasmed-navy">NASMED</span></div>
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Account Number</span><span className="font-bold text-nasmed-navy tracking-widest">0227297914</span></div>
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Bank</span><span className="font-bold text-nasmed-navy">Union Bank of Nigeria</span></div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-[14px] p-6 shadow-sm border-t-4 border-amber-500">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">Dollar Account (USD)</span>
+                  </div>
+                  <div className="space-y-3 text-[14px]">
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Account Name</span><span className="font-bold text-nasmed-navy">NASMED</span></div>
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Account Number</span><span className="font-bold text-nasmed-navy tracking-widest">0227342474</span></div>
+                    <div className="flex justify-between"><span className="text-nasmed-text-muted">Bank</span><span className="font-bold text-nasmed-navy">Union Bank of Nigeria</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction Records */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-base font-bold text-nasmed-navy">Payment Records</h3>
+                  <div className="flex gap-3 items-center">
+                    <button
+                      onClick={() => {
+                        try { setTransactions(JSON.parse(localStorage.getItem("nasmed_transactions") || "[]")); } catch { /* ignore */ }
+                      }}
+                      className="text-[12px] text-nasmed-mid-blue border border-nasmed-mid-blue/30 py-1 px-3 rounded cursor-pointer bg-transparent hover:bg-nasmed-mid-blue/5"
+                    >↻ Refresh</button>
+                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[200px] focus:border-nasmed-mid-blue" placeholder="Search..." />
+                  </div>
+                </div>
+                {transactions.length === 0 ? (
+                  <div className="text-center py-12 text-nasmed-text-muted text-[13px]">No transactions yet. Payments from membership registrations will appear here.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead><tr>{["Reference", "Member", "Tier", "Amount", "Currency", "Method", "Status", "Date"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                      <tbody>
+                        {transactions
+                          .filter(t => !search || ["member","email","tier","ref"].some(k => String(t[k]||"").toLowerCase().includes(search.toLowerCase())))
+                          .map((t, i) => (
+                          <tr key={i} className="hover:bg-nasmed-off-white">
+                            <td className="py-3 px-3 text-[11px] font-mono">{String(t.ref || "—")}</td>
+                            <td className="py-3 px-3 text-[13px] font-semibold">{String(t.member || "—")}</td>
+                            <td className="py-3 px-3 text-[13px]">{String(t.tier || "—")}</td>
+                            <td className="py-3 px-3 text-[13px] font-bold">{String(t.amount || "—")}</td>
+                            <td className="py-3 px-3 text-[13px]">{String(t.currency || "NGN")}</td>
+                            <td className="py-3 px-3 text-[13px]">
+                              <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${t.method === "Paystack" ? "bg-[#0BA4DB]/10 text-[#0993c5]" : "bg-amber-500/10 text-amber-700"}`}>
+                                {String(t.method || "—")}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              {statusBadge(t.status === "confirmed" ? "approved" : t.status === "awaiting_confirmation" ? "pending" : String(t.status || "pending"))}
+                            </td>
+                            <td className="py-3 px-3 text-[13px]">{String(t.date || "—")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </>
           )}

@@ -1,17 +1,29 @@
 import PageHeader from "@/components/PageHeader";
-import aboutImg from "@/assets/about-img.jpg";
+import aboutImg from "@/assets/cac-handover.jpg";
+import presidentPhoto from "@/assets/president-photo.jpg";
+import secretaryGeneralPhoto from "@/assets/Secretary General.jpeg";
+import asstSecretaryGeneralPhoto from "@/assets/ASSISTANT SECRETARY GENERAL.jpg";
+import treasurerPhoto from "@/assets/TREASURER.jpg";
+import drUmmukulthoumBakarePhoto from "@/assets/Dr. Ummukulthoum Bakare.jpeg";
+import drMazeedOlokoPhoto from "@/assets/DR MAZEED OLOKO.jpeg";
+import drSundayOnimisiSalamiPhoto from "@/assets/Dr Sunday Onimisi Salami.jpg";
+import drAdebukola from "@/assets/Dr. Adebukola Bojuwoye.png";
+import drIbrahimTijjani from "@/assets/Dr. Ibrahim Tijjani Bashir.png";
+import drAniezeKenechukwu from "@/assets/DR ANIEZE KENECHUKWU JOHN.png";
+import drOlatundeMakanujPhoto from "@/assets/Olatunde Makanju.jpeg";
 
 const leaders = [
-  { name: "Dr. Olajide Joseph Adebola", role: "President", location: "Abuja", initials: "OA" },
-  { name: "Dr. Adebukola Bojuwoye", role: "1st Vice President", location: "Lagos", initials: "AB" },
-  { name: "Dr. Ummukulthoum Bakare", role: "2nd Vice President", location: "Canada", initials: "UB" },
-  { name: "Dr. Ibrahim Tijjani Bashir", role: "3rd Vice President", location: "Bauchi", initials: "IB" },
-  { name: "Dr. Obinnaya Francis Udugwu", role: "Secretary General", location: "Port Harcourt", initials: "OU" },
-  { name: "Dr. Marian Odu", role: "Asst. Secretary General", location: "Lagos", initials: "MO" },
-  { name: "Amaka Judit Enebe", role: "Treasurer", location: "Enugu", initials: "AE" },
-  { name: "Dr. Anieze Kenechukwu John", role: "Financial Secretary", location: "Enugu", initials: "AJ" },
-  { name: "Dr. Babatunde John Akinbinu", role: "Publicity Secretary", location: "Akure", initials: "BA" },
-  { name: "Dr. Mazeed Oloko", role: "Ex-Officio", location: "Abeokuta", initials: "MO" },
+  { name: "Dr. Olajide Joseph Adebola", role: "President", location: "Abuja", initials: "OA", photo: presidentPhoto },
+  { name: "Dr. Adebukola Bojuwoye", role: "1st Vice President", location: "Lagos", initials: "AB", photo: drAdebukola },
+  { name: "Dr. Ummukulthoum Bakare", role: "2nd Vice President", location: "Canada", initials: "UB", photo: drUmmukulthoumBakarePhoto },
+  { name: "Dr. Ibrahim Tijjani Bashir", role: "3rd Vice President", location: "Bauchi", initials: "IB", photo: drIbrahimTijjani },
+  { name: "Dr. Obinnaya Francis Udugwu", role: "Secretary General", location: "Port Harcourt", initials: "OU", photo: secretaryGeneralPhoto },
+  { name: "Dr. Marian Odu", role: "Asst. Secretary General", location: "Lagos", initials: "MO", photo: asstSecretaryGeneralPhoto },
+  { name: "PT. Amaka Judit Enebe", role: "Treasurer", location: "Enugu", initials: "AE", photo: treasurerPhoto },
+  { name: "Dr. Anieze Kenechukwu John", role: "Financial Secretary", location: "Enugu", initials: "AJ", photo: drAniezeKenechukwu },
+  { name: "Dr. Mazeed Oloko", role: "Ex-Officio", location: "Abeokuta", initials: "MO", photo: drMazeedOlokoPhoto },
+  { name: "Dr. Sunday Onimisi Salami", role: "Ex-Officio", location: "Lagos", initials: "SS", photo: drSundayOnimisiSalamiPhoto },
+  { name: "Dr. Olatunde Makanju", role: "Ex-Officio/Immediate Past President", location: "Lagos", initials: "OM", photo: drOlatundeMakanujPhoto },
 ];
 
 const missionCards = [
@@ -216,11 +228,17 @@ export default function AboutPage() {
             {leaders.map(l => (
               <div key={l.name + l.role} className="rounded-[14px] overflow-hidden border-[1.5px] border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1 hover:border-nasmed-mid-blue">
                 {/* Photo placeholder frame */}
-                <div className="w-full aspect-square bg-gradient-to-br from-nasmed-navy/10 to-nasmed-mid-blue/10 flex flex-col items-center justify-center border-b-2 border-dashed border-nasmed-gray-light relative">
-                  <div className="w-16 h-16 rounded-full bg-nasmed-navy/15 border-2 border-dashed border-nasmed-mid-blue/40 flex items-center justify-center mb-2">
-                    <span className="text-nasmed-navy/40 text-xl font-bold">{l.initials}</span>
-                  </div>
-                  <span className="text-[10px] text-nasmed-text-muted/50 font-medium tracking-wide">Photo coming soon</span>
+                <div className="w-full aspect-square bg-gradient-to-br from-nasmed-navy/10 to-nasmed-mid-blue/10 flex flex-col items-center justify-center border-b-2 border-dashed border-nasmed-gray-light relative overflow-hidden">
+                  {l.photo ? (
+                    <img src={l.photo} alt={l.name} className="w-full h-full object-cover object-top" />
+                  ) : (
+                    <>
+                      <div className="w-16 h-16 rounded-full bg-nasmed-navy/15 border-2 border-dashed border-nasmed-mid-blue/40 flex items-center justify-center mb-2">
+                        <span className="text-nasmed-navy/40 text-xl font-bold">{l.initials}</span>
+                      </div>
+                      <span className="text-[10px] text-nasmed-text-muted/50 font-medium tracking-wide">Photo coming soon</span>
+                    </>
+                  )}
                 </div>
                 <div className="p-4">
                   <div className="font-bold text-sm text-nasmed-navy mb-1 leading-snug">{l.name}</div>

@@ -269,9 +269,13 @@ export default function StrategicPlanPage() {
               </nav>
               <div className="mt-6 pt-6 border-t border-nasmed-gray-light">
                 <div className="text-[11px] font-bold tracking-[1.5px] text-nasmed-text-muted uppercase mb-3">Download</div>
-                <button className="w-full bg-nasmed-green text-white py-2.5 px-4 rounded-lg text-[13px] font-semibold hover:bg-nasmed-green-light transition-all">
+                <a
+                  href="/NASMED Strategic Plan 2024-2028_IMPACT PROGRAMME.pdf"
+                  download
+                  className="block w-full bg-nasmed-green text-white py-2.5 px-4 rounded-lg text-[13px] font-semibold hover:bg-nasmed-green-light transition-all text-center"
+                >
                   📥 Download PDF
-                </button>
+                </a>
               </div>
             </div>
           </div>
