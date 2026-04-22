@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import { applicationService } from "@/services/applicationService";
+import authService from "@/lib/authService";
 import PaystackPop from "@paystack/inline-js";
 import MembershipCertificate from "@/components/MembershipCertificate";
 
@@ -59,6 +60,7 @@ export default function MembershipPage() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
+    password: "", confirmPassword: "",
     ref1Name: "", ref1Email: "", ref1Mobile: "",
     ref2Name: "", ref2Email: "", ref2Mobile: "",
     statement: "", agreed: false,
@@ -91,6 +93,16 @@ export default function MembershipPage() {
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.email || !formData.category) {
       toast.error("Please complete all required fields.");
+      setStep(1);
+      return;
+    }
+    if (!formData.password || formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      setStep(1);
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match.");
       setStep(1);
       return;
     }
@@ -129,6 +141,15 @@ export default function MembershipPage() {
       };
       const existing: unknown[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
       localStorage.setItem("nasmed_applications", JSON.stringify([appEntry, ...existing]));
+
+      // Create Supabase auth account — best-effort, never blocks submission
+      authService.signUp(formData.email, formData.password, formData.fullName, formData.category)
+        .then(({ error }) => {
+          if (error && !error.toLowerCase().includes("already registered")) {
+            console.warn("Supabase account creation failed:", error);
+          }
+        })
+        .catch(() => {});
 
       // Best-effort Supabase sync — don't block on this
       applicationService.create({
@@ -466,6 +487,28 @@ export default function MembershipPage() {
                           <label className="text-[13px] font-semibold text-nasmed-navy">Email <span className="text-red-600">*</span></label>
                           <input type="email" value={formData.email} onChange={e => updateField('email', e.target.value)} placeholder="your@email.com" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
                         </div>
+
+                        {/* Login password — spans full row */}
+                        <div className="col-span-full">
+                          <div className="flex items-center gap-3 my-1">
+                            <div className="h-px flex-1 bg-nasmed-gray-light" />
+                            <span className="text-[11px] font-bold text-nasmed-text-muted uppercase tracking-widest">Create Your Login Password</span>
+                            <div className="h-px flex-1 bg-nasmed-gray-light" />
+                          </div>
+                          <p className="text-[12px] text-nasmed-text-muted mt-1 mb-3">You'll use this email + password to log into your member dashboard after approval.</p>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-semibold text-nasmed-navy">Password <span className="text-red-600">*</span></label>
+                          <input type="password" value={formData.password} onChange={e => updateField('password', e.target.value)} placeholder="Min 8 characters" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[13px] font-semibold text-nasmed-navy">Confirm Password <span className="text-red-600">*</span></label>
+                          <input type="password" value={formData.confirmPassword} onChange={e => updateField('confirmPassword', e.target.value)} placeholder="Repeat your password" className={`py-2.5 px-3.5 border-[1.5px] rounded-lg text-sm outline-none transition-colors ${formData.confirmPassword && formData.password !== formData.confirmPassword ? "border-red-400 focus:border-red-500" : "border-nasmed-gray-light focus:border-nasmed-mid-blue"}`} />
+                          {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                            <p className="text-[11px] text-red-500">Passwords do not match</p>
+                          )}
+                        </div>
+
                         <div className="flex flex-col gap-1.5">
                           <label className="text-[13px] font-semibold text-nasmed-navy">State of Practice <span className="text-red-600">*</span></label>
                           <select value={formData.state} onChange={e => updateField('state', e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors">
@@ -594,6 +637,7 @@ export default function MembershipPage() {
                         {[
                           ["Full Name", formData.fullName],
                           ["Email", formData.email],
+                          ["Login Password", formData.password ? "••••••••" : "—"],
                           ["Mobile", formData.mobile],
                           ["State", formData.state],
                           ["Category", formData.category],
