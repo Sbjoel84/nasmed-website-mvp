@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import logo from "@/assets/nasmed-logo.png";
-import { useAuth } from "@/contexts/AuthContext";
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -17,7 +16,6 @@ const navLinks = [
 
 export default function Navbar() {
   const { pathname } = useLocation();
-  const { isAdmin } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -59,24 +57,6 @@ export default function Navbar() {
             </li>
           );
         })}
-        {isAdmin && (
-          <li>
-            <Link
-              to="/admin"
-              onClick={() => setMenuOpen(false)}
-              className={`text-white/80 no-underline text-[13.5px] font-medium tracking-wide transition-colors hover:text-white relative block py-2 md:py-1 group
-                ${pathname === '/admin' ? "!text-white" : ""}`}
-            >
-              🔒 Admin
-              {pathname === '/admin' && (
-                <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white rounded-full" />
-              )}
-              {pathname !== '/admin' && (
-                <span className="absolute bottom-0 left-0 h-[2px] bg-nasmed-green rounded-full w-0 group-hover:w-full transition-all duration-300 ease-out" />
-              )}
-            </Link>
-          </li>
-        )}
         <li>
           <Link to="/membership" onClick={() => setMenuOpen(false)} className="bg-nasmed-green text-white border-none py-2 px-5 rounded-md text-[13px] font-semibold no-underline transition-all hover:bg-nasmed-green-light hover:-translate-y-px">
             Join NASMED

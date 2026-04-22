@@ -3,7 +3,7 @@ import aboutImg from "@/assets/cac-handover.jpg";
 import presidentPhoto from "@/assets/president-photo.jpg";
 import secretaryGeneralPhoto from "@/assets/Secretary General.jpeg";
 import asstSecretaryGeneralPhoto from "@/assets/ASSISTANT SECRETARY GENERAL.jpg";
-import treasurerPhoto from "@/assets/TREASURER.jpg";
+import treasurerPhoto from "@/assets/PT AMAKA JUDITH ENEBE.png";
 import drUmmukulthoumBakarePhoto from "@/assets/Dr. Ummukulthoum Bakare.jpeg";
 import drMazeedOlokoPhoto from "@/assets/DR MAZEED OLOKO.jpeg";
 import drSundayOnimisiSalamiPhoto from "@/assets/Dr Sunday Onimisi Salami.jpg";
@@ -19,7 +19,7 @@ const leaders = [
   { name: "Dr. Ibrahim Tijjani Bashir", role: "3rd Vice President", location: "Bauchi", initials: "IB", photo: drIbrahimTijjani },
   { name: "Dr. Obinnaya Francis Udugwu", role: "Secretary General", location: "Port Harcourt", initials: "OU", photo: secretaryGeneralPhoto },
   { name: "Dr. Marian Odu", role: "Asst. Secretary General", location: "Lagos", initials: "MO", photo: asstSecretaryGeneralPhoto },
-  { name: "PT. Amaka Judit Enebe", role: "Treasurer", location: "Enugu", initials: "AE", photo: treasurerPhoto },
+  { name: "PT. Amaka Judith Enebe", role: "Treasurer", location: "Enugu", initials: "AE", photo: treasurerPhoto },
   { name: "Dr. Anieze Kenechukwu John", role: "Financial Secretary", location: "Enugu", initials: "AJ", photo: drAniezeKenechukwu },
   { name: "Dr. Mazeed Oloko", role: "Ex-Officio", location: "Abeokuta", initials: "MO", photo: drMazeedOlokoPhoto },
   { name: "Dr. Sunday Onimisi Salami", role: "Ex-Officio", location: "Lagos", initials: "SS", photo: drSundayOnimisiSalamiPhoto },
