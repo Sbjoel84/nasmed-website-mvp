@@ -55,9 +55,7 @@ function AppContent() {
             <Route path="/member-dashboard" element={<MemberDashboardPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute requireAdmin />}>
-            <Route path="/admin" element={<AdminPage />} />
-          </Route>
+          <Route path="/admin" element={<AdminPage />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

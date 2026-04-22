@@ -25,6 +25,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const initializeAuth = async () => {
+      // Safety timeout — never let loading hang more than 3 seconds
+      const timer = setTimeout(() => { if (mounted) setLoading(false); }, 3000);
       try {
         // getSession reads localStorage — fast, no network call
         const session = await authService.getSession();
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (mounted) setUser(currentUser);
         }
       } finally {
+        clearTimeout(timer);
         if (mounted) setLoading(false);
       }
     };
