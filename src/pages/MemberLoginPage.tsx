@@ -319,7 +319,7 @@ export default function MemberLoginPage() {
                 </button>
               </form>
               <p className="text-center text-xs text-nasmed-text-muted mt-5">
-                Contact the NASMED secretariat if you have not yet received your login credentials.
+                If you do not have your login details, Please, kindly use the forgot password to initiate a new password for your login credentials.
               </p>
             </>
           )}
