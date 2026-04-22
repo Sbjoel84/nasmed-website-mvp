@@ -15,6 +15,12 @@ export default function MemberLoginPage() {
   const [password, setPassword] = useState("");
   const [loginErr, setLoginErr] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotErr, setForgotErr] = useState("");
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
   
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -55,6 +61,20 @@ export default function MemberLoginPage() {
     } else {
       toast.success("Login successful!");
       navigate("/member-dashboard");
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErr("");
+    if (!forgotEmail) { setForgotErr("Please enter your email address."); return; }
+    setForgotSubmitting(true);
+    const { error } = await authService.resetPasswordForEmail(forgotEmail);
+    setForgotSubmitting(false);
+    if (error) {
+      setForgotErr(error);
+    } else {
+      setForgotSent(true);
     }
   };
 
@@ -193,51 +213,116 @@ export default function MemberLoginPage() {
         <div className="bg-white rounded-2xl p-10 w-full max-w-[440px] shadow-xl flex-shrink-0">
           <div className="text-center mb-8">
             <img src={logo} alt="NASMED" className="w-20 h-20 rounded-full object-cover border-[3px] border-nasmed-green-light mx-auto mb-4" />
-            <h2 className="font-heading text-nasmed-navy text-[26px] mb-1.5">Member Login</h2>
-            <p className="text-nasmed-text-muted text-sm">Enter your NASMED credentials to access your portal</p>
+            <h2 className="font-heading text-nasmed-navy text-[26px] mb-1.5">
+              {forgotMode ? "Reset Password" : "Member Login"}
+            </h2>
+            <p className="text-nasmed-text-muted text-sm">
+              {forgotMode ? "Enter your registered email to receive a reset link" : "Enter your NASMED credentials to access your portal"}
+            </p>
           </div>
-          
-          {loginErr && (
-            <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px] mb-4">
-              {loginErr}
-            </div>
+
+          {/* ── FORGOT PASSWORD MODE ── */}
+          {forgotMode ? (
+            forgotSent ? (
+              <div className="text-center">
+                <div className="text-5xl mb-4">📧</div>
+                <h3 className="font-heading text-nasmed-navy text-lg mb-2">Check your inbox</h3>
+                <p className="text-nasmed-text-muted text-[13px] leading-relaxed mb-6">
+                  We've sent a password reset link to <strong>{forgotEmail}</strong>. Click the link in the email to set a new password.
+                </p>
+                <p className="text-[12px] text-nasmed-text-muted mb-5">Didn't receive it? Check your spam folder or try again.</p>
+                <button
+                  onClick={() => { setForgotMode(false); setForgotSent(false); setForgotEmail(""); setForgotErr(""); }}
+                  className="text-nasmed-mid-blue text-sm font-semibold hover:underline bg-transparent border-none cursor-pointer"
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                {forgotErr && (
+                  <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px]">{forgotErr}</div>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Registered Email</label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={forgotSubmitting}
+                  className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {forgotSubmitting ? "Sending..." : "Send Reset Link →"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setForgotMode(false); setForgotErr(""); }}
+                  className="text-nasmed-text-muted text-sm hover:text-nasmed-navy bg-transparent border-none cursor-pointer text-center"
+                >
+                  ← Back to Sign In
+                </button>
+              </form>
+            )
+          ) : (
+            /* ── LOGIN MODE ── */
+            <>
+              {loginErr && (
+                <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px] mb-4">
+                  {loginErr}
+                </div>
+              )}
+              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Email</label>
+                  <input
+                    type="text"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Password</label>
+                    <button
+                      type="button"
+                      onClick={() => { setForgotMode(true); setForgotEmail(email); setLoginErr(""); }}
+                      className="text-[12px] text-nasmed-mid-blue hover:underline bg-transparent border-none cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? "Signing in..." : "Sign In →"}
+                </button>
+              </form>
+              <p className="text-center text-xs text-nasmed-text-muted mt-5">
+                Contact the NASMED secretariat if you have not yet received your login credentials.
+              </p>
+            </>
           )}
-          
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-nasmed-navy">Username or Email</label>
-              <input
-                type="text"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="your.username or email@example.com"
-                className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-nasmed-navy">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
-                required
-              />
-            </div>
-            <button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Signing in..." : "Sign In →"}
-            </button>
-          </form>
-          
-          <p className="text-center text-xs text-nasmed-text-muted mt-5">
-            Contact the NASMED secretariat if you have not yet received your login credentials.
-          </p>
         </div>
 
         {/* Info card */}

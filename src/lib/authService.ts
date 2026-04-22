@@ -161,6 +161,18 @@ export const authService = {
     }
   },
 
+  async resetPasswordForEmail(email: string): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch {
+      return { error: 'An unexpected error occurred' };
+    }
+  },
+
   onAuthStateChange(callback: (event: string, session: Session | null) => void) {
     return supabase.auth.onAuthStateChange(callback);
   },

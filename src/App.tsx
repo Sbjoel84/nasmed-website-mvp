@@ -16,6 +16,7 @@ import NewsPage from "@/pages/NewsPage";
 import StrategicPlanPage from "@/pages/StrategicPlanPage";
 import MemberDashboardPage from "@/pages/MemberDashboardPage";
 import NotFound from "@/pages/NotFound";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import { useEffect } from "react";
@@ -55,6 +56,7 @@ function AppContent() {
             <Route path="/member-dashboard" element={<MemberDashboardPage />} />
           </Route>
 
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/admin" element={<AdminPage />} />
 
           <Route path="*" element={<NotFound />} />
