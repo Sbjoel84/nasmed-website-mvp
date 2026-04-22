@@ -58,6 +58,13 @@ export default function MembershipPage() {
   });
   const [currentAppId, setCurrentAppId] = useState("");
   const [step, setStep] = useState(1);
+
+  // Simple payment modal state (Additional Contributions)
+  const [showSimplePay, setShowSimplePay] = useState(false);
+  const [simplePayItem, setSimplePayItem] = useState<{ label: string; price: string; icon: string } | null>(null);
+  const [simplePayStep, setSimplePayStep] = useState<1 | 2 | 3>(1);
+  const [simplePayData, setSimplePayData] = useState({ name: "", email: "", amount: "" });
+  const [simplePayErr, setSimplePayErr] = useState("");
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
     password: "", confirmPassword: "",
@@ -84,6 +91,71 @@ export default function MembershipPage() {
   const closeForm = () => {
     setShowForm(false);
     setStep(1);
+  };
+
+  const openSimplePay = (item: typeof otherPayments[0]) => {
+    setSimplePayItem(item);
+    setSimplePayData({
+      name: "",
+      email: "",
+      amount: item.price === "Open Amount" ? "" : item.price.replace("₦", "").replace(/,/g, ""),
+    });
+    setSimplePayErr("");
+    setSimplePayStep(1);
+    setShowSimplePay(true);
+  };
+
+  const closeSimplePay = () => {
+    setShowSimplePay(false);
+    setSimplePayStep(1);
+  };
+
+  const handleSimplePayProceed = () => {
+    if (!simplePayData.name.trim()) { setSimplePayErr("Please enter your full name."); return; }
+    if (!simplePayData.email.trim()) { setSimplePayErr("Please enter your email address."); return; }
+    if (!simplePayData.amount || isNaN(Number(simplePayData.amount.replace(/,/g, ""))) || Number(simplePayData.amount.replace(/,/g, "")) <= 0) {
+      setSimplePayErr("Please enter a valid amount."); return;
+    }
+    setSimplePayErr("");
+    setSimplePayStep(2);
+  };
+
+  const saveSimpleTransaction = (ref: string, method: string, status: string) => {
+    try {
+      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
+      txns.unshift({
+        ref,
+        member: simplePayData.name,
+        email: simplePayData.email,
+        tier: simplePayItem?.label,
+        amount: `₦${Number(simplePayData.amount.replace(/,/g, "")).toLocaleString()}`,
+        currency: "NGN",
+        method,
+        status,
+        date: new Date().toLocaleDateString("en-GB"),
+      });
+      localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
+    } catch { /* ignore */ }
+  };
+
+  const handleSimplePaystack = () => {
+    const amountKobo = Math.round(Number(simplePayData.amount.replace(/,/g, "")) * 100);
+    if (!amountKobo || amountKobo <= 0) { toast.error("Invalid amount."); return; }
+    const popup = new PaystackPop();
+    popup.newTransaction({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
+      email: simplePayData.email,
+      amount: amountKobo,
+      currency: "NGN",
+      metadata: { full_name: simplePayData.name, payment_type: simplePayItem?.label },
+      onSuccess: (transaction: Record<string, unknown>) => {
+        const ref = (transaction?.reference as string) || ("PSK-" + Date.now());
+        saveSimpleTransaction(ref, "Paystack", "confirmed");
+        toast.success("Payment successful! Thank you.");
+        setSimplePayStep(3);
+      },
+      onCancel: () => { toast.error("Payment cancelled."); },
+    });
   };
 
   const updateField = (field: string, value: string | boolean) => {
@@ -359,7 +431,7 @@ export default function MembershipPage() {
                 </div>
                 <p className="text-[13px] text-nasmed-text-muted mb-6 leading-relaxed">{item.desc}</p>
                 <button
-                  onClick={() => selectPlan(item.label)}
+                  onClick={() => openSimplePay(item)}
                   className="block w-full text-center py-3 rounded-lg font-semibold text-[13px] transition-all border-2 cursor-pointer border-nasmed-gray-light text-nasmed-navy hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue bg-transparent"
                 >
                   Pay Now →
@@ -770,6 +842,164 @@ export default function MembershipPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── SIMPLE PAYMENT MODAL (Additional Contributions) ── */}
+      {showSimplePay && simplePayItem && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center px-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={closeSimplePay} />
+
+          <div className="relative z-10 w-full max-w-[480px]">
+            {/* Close */}
+            <button
+              onClick={closeSimplePay}
+              className="absolute -top-2 -right-2 z-20 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center text-nasmed-navy hover:bg-nasmed-off-white transition-colors cursor-pointer text-lg font-bold border-none"
+            >
+              ✕
+            </button>
+
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-blue p-7">
+                <div className="text-3xl mb-2">{simplePayItem.icon}</div>
+                <h3 className="text-white font-heading text-[22px] mb-1">{simplePayItem.label}</h3>
+                <p className="text-white/65 text-[13px]">{simplePayItem.desc}</p>
+              </div>
+
+              {/* Step 1 — Details */}
+              {simplePayStep === 1 && (
+                <div className="p-8 flex flex-col gap-5">
+                  {simplePayErr && (
+                    <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px]">{simplePayErr}</div>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Full Name <span className="text-red-600">*</span></label>
+                    <input
+                      type="text"
+                      value={simplePayData.name}
+                      onChange={e => setSimplePayData(p => ({ ...p, name: e.target.value }))}
+                      placeholder="Your full name"
+                      className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Email Address <span className="text-red-600">*</span></label>
+                    <input
+                      type="email"
+                      value={simplePayData.email}
+                      onChange={e => setSimplePayData(p => ({ ...p, email: e.target.value }))}
+                      placeholder="your@email.com"
+                      className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">
+                      Amount (₦) <span className="text-red-600">*</span>
+                      {simplePayItem.price !== "Open Amount" && (
+                        <span className="ml-2 text-nasmed-green font-normal">Recommended: {simplePayItem.price}</span>
+                      )}
+                    </label>
+                    <input
+                      type="number"
+                      value={simplePayData.amount}
+                      onChange={e => setSimplePayData(p => ({ ...p, amount: e.target.value }))}
+                      placeholder="Enter amount in Naira"
+                      className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors"
+                      min="1"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSimplePayProceed}
+                    className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full mt-1"
+                  >
+                    Proceed to Payment →
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2 — Payment Options */}
+              {simplePayStep === 2 && (
+                <div className="p-8 flex flex-col gap-5">
+                  <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4 flex items-center justify-between">
+                    <span className="text-[13px] text-nasmed-text-muted">{simplePayData.name} — {simplePayItem.label}</span>
+                    <span className="text-[22px] font-bold text-nasmed-navy">₦{Number(simplePayData.amount).toLocaleString()}</span>
+                  </div>
+
+                  {/* Bank Transfer */}
+                  <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
+                    <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
+                      <span className="text-[18px]">🏦</span>
+                      <span className="font-bold text-[14px] text-nasmed-navy">Direct Bank Transfer</span>
+                    </div>
+                    <div className="p-5 space-y-3">
+                      <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
+                        <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-0.5 rounded-full">Naira Account</span>
+                        <div className="grid grid-cols-3 gap-2 mt-3 text-[13px]">
+                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p><p className="font-bold text-nasmed-navy">NASMED</p></div>
+                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account No.</p><p className="font-bold text-nasmed-navy tracking-widest">0227297914</p></div>
+                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p><p className="font-bold text-nasmed-navy">Union Bank</p></div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          saveSimpleTransaction("BNK-" + Date.now(), "Bank Transfer", "awaiting_confirmation");
+                          setSimplePayStep(3);
+                        }}
+                        className="w-full bg-nasmed-navy text-white border-none py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-nasmed-mid-blue transition-all"
+                      >
+                        I've Completed Bank Transfer →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Paystack */}
+                  <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
+                    <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
+                      <span className="text-[18px]">💳</span>
+                      <span className="font-bold text-[14px] text-nasmed-navy">Pay Online via Paystack</span>
+                    </div>
+                    <div className="p-5 flex items-center gap-4">
+                      <p className="text-[13px] text-nasmed-text-muted flex-1">Pay securely with card, bank transfer, or USSD.</p>
+                      <button
+                        onClick={handleSimplePaystack}
+                        className="shrink-0 bg-[#0BA4DB] hover:bg-[#0993c5] text-white font-semibold text-[13px] py-2.5 px-6 rounded-lg transition-colors border-none cursor-pointer"
+                      >
+                        Pay with Paystack →
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSimplePayStep(1)}
+                    className="text-nasmed-text-muted text-sm hover:text-nasmed-navy bg-transparent border-none cursor-pointer text-center"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              )}
+
+              {/* Step 3 — Success */}
+              {simplePayStep === 3 && (
+                <div className="p-10 text-center">
+                  <div className="text-5xl mb-4">🎉</div>
+                  <h3 className="font-heading text-nasmed-navy text-[22px] mb-2">Thank You!</h3>
+                  <p className="text-nasmed-text-muted text-[13px] leading-relaxed mb-2">
+                    Your <strong>{simplePayItem.label}</strong> payment of <strong>₦{Number(simplePayData.amount).toLocaleString()}</strong> has been received.
+                  </p>
+                  <p className="text-[12px] text-nasmed-text-muted mb-7">
+                    A confirmation will be sent to <strong>{simplePayData.email}</strong> once payment is verified.
+                  </p>
+                  <button
+                    onClick={closeSimplePay}
+                    className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
