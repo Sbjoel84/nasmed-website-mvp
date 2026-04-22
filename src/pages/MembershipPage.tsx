@@ -63,7 +63,7 @@ export default function MembershipPage() {
   const [showSimplePay, setShowSimplePay] = useState(false);
   const [simplePayItem, setSimplePayItem] = useState<{ label: string; price: string; icon: string } | null>(null);
   const [simplePayStep, setSimplePayStep] = useState<1 | 2 | 3>(1);
-  const [simplePayData, setSimplePayData] = useState({ name: "", email: "", amount: "" });
+  const [simplePayData, setSimplePayData] = useState({ name: "", email: "", amount: "", description: "" });
   const [simplePayErr, setSimplePayErr] = useState("");
   const [formData, setFormData] = useState({
     fullName: "", mobile: "", email: "", email2: "", state: "", category: "",
@@ -99,6 +99,7 @@ export default function MembershipPage() {
       name: "",
       email: "",
       amount: item.price === "Open Amount" ? "" : item.price.replace("₦", "").replace(/,/g, ""),
+      description: "",
     });
     setSimplePayErr("");
     setSimplePayStep(1);
@@ -132,6 +133,7 @@ export default function MembershipPage() {
         currency: "NGN",
         method,
         status,
+        description: simplePayData.description || "",
         date: new Date().toLocaleDateString("en-GB"),
       });
       localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
@@ -910,6 +912,18 @@ export default function MembershipPage() {
                       min="1"
                     />
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">
+                      Purpose / Description <span className="text-nasmed-text-muted font-normal">(optional)</span>
+                    </label>
+                    <textarea
+                      value={simplePayData.description}
+                      onChange={e => setSimplePayData(p => ({ ...p, description: e.target.value }))}
+                      rows={3}
+                      placeholder="Briefly describe the reason for this contribution…"
+                      className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors resize-none"
+                    />
+                  </div>
                   <button
                     onClick={handleSimplePayProceed}
                     className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full mt-1"
@@ -922,9 +936,14 @@ export default function MembershipPage() {
               {/* Step 2 — Payment Options */}
               {simplePayStep === 2 && (
                 <div className="p-8 flex flex-col gap-5">
-                  <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4 flex items-center justify-between">
-                    <span className="text-[13px] text-nasmed-text-muted">{simplePayData.name} — {simplePayItem.label}</span>
-                    <span className="text-[22px] font-bold text-nasmed-navy">₦{Number(simplePayData.amount).toLocaleString()}</span>
+                  <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[13px] text-nasmed-text-muted">{simplePayData.name} — {simplePayItem.label}</span>
+                      <span className="text-[22px] font-bold text-nasmed-navy">₦{Number(simplePayData.amount).toLocaleString()}</span>
+                    </div>
+                    {simplePayData.description && (
+                      <p className="text-[12px] text-nasmed-text-muted italic mt-1">"{simplePayData.description}"</p>
+                    )}
                   </div>
 
                   {/* Bank Transfer */}
@@ -988,6 +1007,9 @@ export default function MembershipPage() {
                   <p className="text-nasmed-text-muted text-[13px] leading-relaxed mb-2">
                     Your <strong>{simplePayItem.label}</strong> payment of <strong>₦{Number(simplePayData.amount).toLocaleString()}</strong> has been received.
                   </p>
+                  {simplePayData.description && (
+                    <p className="text-[13px] text-nasmed-text-muted italic mb-3">"{simplePayData.description}"</p>
+                  )}
                   <p className="text-[12px] text-nasmed-text-muted mb-7">
                     A confirmation will be sent to <strong>{simplePayData.email}</strong> once payment is verified.
                   </p>
