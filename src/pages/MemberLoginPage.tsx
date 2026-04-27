@@ -6,12 +6,13 @@ import PageHeader from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import { publicationService, Publication } from "@/services/publicationService";
+import authService from "@/lib/authService";
 
 export default function MemberLoginPage() {
-  const { user, signIn, loading: authLoading, isAdmin, updatePassword } = useAuth();
+  const { user, signIn, loading: authLoading, isAdmin, updatePassword, markPasswordChanged, mustChangePassword, signOut } = useAuth();
   const navigate = useNavigate();
-  
-  const [email, setEmail] = useState("");
+
+  const [credential, setCredential] = useState("");
   const [password, setPassword] = useState("");
   const [loginErr, setLoginErr] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,20 +22,26 @@ export default function MemberLoginPage() {
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotErr, setForgotErr] = useState("");
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
-  
+
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
   const [passErr, setPassErr] = useState("");
-  
+
+  // Forced first-login password change state
+  const [forcedNewPass, setForcedNewPass] = useState("");
+  const [forcedConfPass, setForcedConfPass] = useState("");
+  const [forcedErr, setForcedErr] = useState("");
+  const [forcedSubmitting, setForcedSubmitting] = useState(false);
+
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loadingPubs, setLoadingPubs] = useState(false);
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (user && !authLoading && !mustChangePassword) {
       loadPublications();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, mustChangePassword]);
 
   const loadPublications = async () => {
     try {
@@ -53,15 +60,17 @@ export default function MemberLoginPage() {
     setLoginErr("");
     setIsSubmitting(true);
 
-    const { error } = await signIn(email, password);
-    
+    const { error } = await signIn(credential, password);
+
     if (error) {
       setLoginErr(error);
       setIsSubmitting(false);
     } else {
       toast.success("Login successful!");
-      navigate("/member-dashboard");
+      // If must_change_password, the modal will show automatically — no redirect yet
+      // The redirect happens after forced password change
     }
+    setIsSubmitting(false);
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -92,8 +101,110 @@ export default function MemberLoginPage() {
     }
   };
 
+  const handleForcedPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForcedErr("");
+    if (forcedNewPass.length < 8) { setForcedErr("Password must be at least 8 characters."); return; }
+    if (forcedNewPass !== forcedConfPass) { setForcedErr("Passwords do not match."); return; }
+
+    setForcedSubmitting(true);
+    const { error: pwErr } = await updatePassword(forcedNewPass);
+    if (pwErr) {
+      setForcedErr(pwErr);
+      setForcedSubmitting(false);
+      return;
+    }
+
+    const { error: markErr } = await markPasswordChanged();
+    if (markErr) {
+      setForcedErr(markErr);
+      setForcedSubmitting(false);
+      return;
+    }
+
+    toast.success("Password changed successfully! Welcome to NASMED.");
+    navigate("/member-dashboard");
+  };
+
   if (authLoading) {
     return <LoadingScreen message="Checking your session..." size="medium" />;
+  }
+
+  // ── FORCED PASSWORD CHANGE MODAL ──
+  if (user && mustChangePassword) {
+    return (
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-nasmed-navy/90 backdrop-blur-sm px-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[440px] overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue p-7 text-center">
+            <div className="text-4xl mb-3">🔐</div>
+            <h2 className="font-heading text-white text-[22px] mb-1">Set Your New Password</h2>
+            <p className="text-white/65 text-[13px]">
+              Welcome, <strong className="text-white">{user.full_name || user.username}</strong>.<br />
+              For security, you must set a personal password before continuing.
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleForcedPasswordChange} className="p-8 flex flex-col gap-5">
+            {forcedErr && (
+              <div className="bg-red-500/10 text-red-600 py-2.5 px-3.5 rounded-lg text-[13px]">{forcedErr}</div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-semibold text-nasmed-navy">New Password</label>
+              <input
+                type="password"
+                value={forcedNewPass}
+                onChange={e => setForcedNewPass(e.target.value)}
+                placeholder="At least 8 characters"
+                className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-semibold text-nasmed-navy">Confirm New Password</label>
+              <input
+                type="password"
+                value={forcedConfPass}
+                onChange={e => setForcedConfPass(e.target.value)}
+                placeholder="Repeat your new password"
+                className={`py-2.5 px-3.5 border-[1.5px] rounded-lg text-sm outline-none transition-colors ${
+                  forcedConfPass && forcedNewPass !== forcedConfPass
+                    ? "border-red-400 focus:border-red-500"
+                    : "border-nasmed-gray-light focus:border-nasmed-mid-blue"
+                }`}
+                required
+              />
+              {forcedConfPass && forcedNewPass !== forcedConfPass && (
+                <p className="text-[11px] text-red-500">Passwords do not match</p>
+              )}
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-[12px] text-amber-800 leading-relaxed">
+              Choose a strong password you haven't used before. You won't be able to access your dashboard until this is done.
+            </div>
+
+            <button
+              type="submit"
+              disabled={forcedSubmitting}
+              className="bg-nasmed-green text-white border-none py-3 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {forcedSubmitting ? "Saving..." : "Set Password & Continue →"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="text-nasmed-text-muted text-sm hover:text-nasmed-navy bg-transparent border-none cursor-pointer text-center"
+            >
+              Sign out instead
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   if (user) {
@@ -107,7 +218,10 @@ export default function MemberLoginPage() {
             <div>
               <p className="text-white/60 text-[13px] mb-1">Welcome back,</p>
               <h2 className="text-white font-heading text-[26px] mb-1">{user.full_name || user.email}</h2>
-              <p className="text-nasmed-green-light text-[13px] font-semibold">{user.membership_type || "Member"}</p>
+              <p className="text-nasmed-green-light text-[13px] font-semibold">{user.position || user.membership_type || "Member"}</p>
+              {user.member_number && (
+                <p className="text-white/50 text-[12px] mt-0.5">{user.member_number}</p>
+              )}
             </div>
             {isAdmin && (
               <Link to="/admin" className="bg-nasmed-green text-white py-2.5 px-5 rounded-lg text-[13px] font-semibold hover:bg-nasmed-green-light">
@@ -280,12 +394,12 @@ export default function MemberLoginPage() {
               )}
               <form onSubmit={handleLogin} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-semibold text-nasmed-navy">Email</label>
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Username or Email</label>
                   <input
                     type="text"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="your@email.com"
+                    value={credential}
+                    onChange={e => setCredential(e.target.value)}
+                    placeholder="username or your@email.com"
                     className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
                     required
                   />
@@ -295,7 +409,7 @@ export default function MemberLoginPage() {
                     <label className="text-[13px] font-semibold text-nasmed-navy">Password</label>
                     <button
                       type="button"
-                      onClick={() => { setForgotMode(true); setForgotEmail(email); setLoginErr(""); }}
+                      onClick={() => { setForgotMode(true); setForgotEmail(""); setLoginErr(""); }}
                       className="text-[12px] text-nasmed-mid-blue hover:underline bg-transparent border-none cursor-pointer"
                     >
                       Forgot password?
@@ -319,7 +433,7 @@ export default function MemberLoginPage() {
                 </button>
               </form>
               <p className="text-center text-xs text-nasmed-text-muted mt-5">
-                If you do not have your login details, Please, kindly use the forgot password to initiate a new password for your login credentials.
+                If you do not have your login details, please use the forgot password option or contact the NASMED secretariat.
               </p>
             </>
           )}

@@ -139,9 +139,30 @@ AFTER INSERT ON auth.users
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_user();
 
+-- Add username, must_change_password, position, member_number columns (safe - only if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='username') THEN
+    ALTER TABLE public.profiles ADD COLUMN username TEXT UNIQUE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='must_change_password') THEN
+    ALTER TABLE public.profiles ADD COLUMN must_change_password BOOLEAN DEFAULT false;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='position') THEN
+    ALTER TABLE public.profiles ADD COLUMN position TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='member_number') THEN
+    ALTER TABLE public.profiles ADD COLUMN member_number TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='status') THEN
+    ALTER TABLE public.profiles ADD COLUMN status TEXT DEFAULT 'active';
+  END IF;
+END $$;
+
 -- Create indexes for faster lookups
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
 
 -- Seed data (safe - won't duplicate)
 INSERT INTO publications (title, type, description, status, downloads)

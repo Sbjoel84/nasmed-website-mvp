@@ -10,8 +10,10 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, membershipType: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
+  markPasswordChanged: () => Promise<{ error: string | null }>;
   isAdmin: boolean;
   isMember: boolean;
+  mustChangePassword: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,14 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const initializeAuth = async () => {
-      // Safety timeout — never let loading hang more than 3 seconds
       const timer = setTimeout(() => { if (mounted) setLoading(false); }, 3000);
       try {
-        // getSession reads localStorage — fast, no network call
         const session = await authService.getSession();
         if (session && mounted) {
           setSession(session);
-          // Only make the network call if a session already exists
           const currentUser = await authService.getCurrentUser();
           if (mounted) setUser(currentUser);
         }
@@ -67,9 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const { user, error } = await authService.signIn(email, password);
-    if (error) {
-      return { error };
-    }
+    if (error) return { error };
     if (user) {
       setUser(user);
       const session = await authService.getSession();
@@ -82,14 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return authService.updatePassword(newPassword);
   };
 
+  const markPasswordChanged = async () => {
+    const result = await authService.markPasswordChanged();
+    if (!result.error && user) {
+      setUser({ ...user, must_change_password: false });
+    }
+    return result;
+  };
+
   const signUp = async (email: string, password: string, fullName: string, membershipType: string) => {
     const { user, error } = await authService.signUp(email, password, fullName, membershipType);
-    if (error) {
-      return { error };
-    }
-    if (user) {
-      setUser(user);
-    }
+    if (error) return { error };
+    if (user) setUser(user);
     return { error: null };
   };
 
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.role === 'admin';
   const isMember = user?.role === 'member' || isAdmin;
+  const mustChangePassword = user?.must_change_password === true;
 
   return (
     <AuthContext.Provider
@@ -112,8 +114,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signOut,
         updatePassword,
+        markPasswordChanged,
         isAdmin,
         isMember,
+        mustChangePassword,
       }}
     >
       {children}

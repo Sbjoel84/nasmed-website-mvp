@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import logo from "@/assets/nasmed-logo.png";
+import authService from "@/lib/authService";
 
 const DEMO_APPS = [
   {
@@ -204,6 +205,27 @@ export default function AdminPage() {
   });
 
   const canAccess = localAuth || (!loading && isAdmin);
+
+  const [initProgress, setInitProgress] = useState<{ done: number; total: number; running: boolean; log: string[] }>({ done: 0, total: 0, running: false, log: [] });
+
+  const initializeMemberAccounts = async () => {
+    if (!confirm(`This will create Supabase auth accounts for all ${DEMO_MEMBERS_INIT.length} members. Existing accounts will be skipped. Continue?`)) return;
+    setInitProgress({ done: 0, total: DEMO_MEMBERS_INIT.length, running: true, log: [] });
+    const log: string[] = [];
+    for (let i = 0; i < DEMO_MEMBERS_INIT.length; i++) {
+      const m = DEMO_MEMBERS_INIT[i];
+      const { error } = await authService.signUpMember(
+        m.email, m.password, m.name, m.tier, m.username, m.id, m.position,
+      );
+      if (error && !error.toLowerCase().includes("already registered") && !error.toLowerCase().includes("user already")) {
+        log.push(`❌ ${m.username}: ${error}`);
+      } else {
+        log.push(`✓ ${m.username}`);
+      }
+      setInitProgress({ done: i + 1, total: DEMO_MEMBERS_INIT.length, running: i + 1 < DEMO_MEMBERS_INIT.length, log: [...log] });
+    }
+    toast.success("Member account initialization complete!");
+  };
 
   // Show local login form if not authenticated via Supabase and not locally authenticated
   if (!canAccess && !loading) {
@@ -819,6 +841,38 @@ export default function AdminPage() {
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Member Credentials</h2>
               <p className="text-nasmed-text-muted text-sm mb-7">View and manage member login credentials for the Member Portal.</p>
+
+              {/* Initialize Member Accounts */}
+              <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-6 mb-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-heading text-[17px] text-nasmed-navy mb-1">Initialize Member Accounts</h3>
+                    <p className="text-[13px] text-nasmed-text-muted max-w-[520px]">
+                      Creates Supabase auth accounts for all {DEMO_MEMBERS_INIT.length} members using their username and default password (<code className="bg-amber-100 px-1 rounded">nasmed2024!</code>). Members will be required to change their password on first login. Existing accounts are skipped.
+                    </p>
+                  </div>
+                  <button
+                    onClick={initializeMemberAccounts}
+                    disabled={initProgress.running}
+                    className="shrink-0 bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-[14px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {initProgress.running ? `Creating... (${initProgress.done}/${initProgress.total})` : "Initialize All Accounts →"}
+                  </button>
+                </div>
+
+                {initProgress.log.length > 0 && (
+                  <div className="mt-4 bg-white border border-amber-200 rounded-lg p-4 max-h-[200px] overflow-y-auto">
+                    <p className="text-[11px] font-bold text-nasmed-text-muted uppercase tracking-wide mb-2">Progress Log</p>
+                    {initProgress.log.map((line, i) => (
+                      <p key={i} className={`text-[12px] font-mono ${line.startsWith("❌") ? "text-red-600" : "text-nasmed-green"}`}>{line}</p>
+                    ))}
+                    {!initProgress.running && (
+                      <p className="text-[13px] font-semibold text-nasmed-navy mt-2">Done — {initProgress.done}/{initProgress.total} accounts processed.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
