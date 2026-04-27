@@ -399,10 +399,11 @@ export default function MemberLoginPage() {
                     type="text"
                     value={credential}
                     onChange={e => setCredential(e.target.value)}
-                    placeholder="username or your@email.com"
+                    placeholder="firstname.lastname or your@email.com"
                     className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
                     required
                   />
+                  <p className="text-[11px] text-nasmed-text-muted">e.g. <span className="font-mono">olatunde.makanju</span> or your registered email</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">

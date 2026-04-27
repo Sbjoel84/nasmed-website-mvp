@@ -30,15 +30,35 @@ export const authService = {
         if (byUsername?.email) {
           emailToUse = byUsername.email;
         } else {
-          // 2. Fallback: fuzzy match on email or full_name
-          const { data: byName } = await supabase
-            .from('profiles')
-            .select('email')
-            .or(`email.ilike.%${credential}%,full_name.ilike.%${credential}%`)
-            .maybeSingle();
+          // 2. Try firstname.lastname pattern against full_name
+          let resolvedEmail: string | null = null;
 
-          if (byName?.email) {
-            emailToUse = byName.email;
+          if (credential.includes('.')) {
+            const [first, ...rest] = credential.split('.');
+            const last = rest.join('.');
+            if (first && last) {
+              const { data: byNameParts } = await supabase
+                .from('profiles')
+                .select('email')
+                .ilike('full_name', `%${first}%`)
+                .ilike('full_name', `%${last}%`)
+                .maybeSingle();
+              if (byNameParts?.email) resolvedEmail = byNameParts.email;
+            }
+          }
+
+          // 3. Fallback: fuzzy match on email prefix
+          if (!resolvedEmail) {
+            const { data: byEmail } = await supabase
+              .from('profiles')
+              .select('email')
+              .ilike('email', `${credential}@%`)
+              .maybeSingle();
+            if (byEmail?.email) resolvedEmail = byEmail.email;
+          }
+
+          if (resolvedEmail) {
+            emailToUse = resolvedEmail;
           } else {
             return { user: null, session: null, error: 'Username or email not found' };
           }
