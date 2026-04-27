@@ -207,6 +207,8 @@ export default function AdminPage() {
   const canAccess = localAuth || (!loading && isAdmin);
 
   const [initProgress, setInitProgress] = useState<{ done: number; total: number; running: boolean; log: string[] }>({ done: 0, total: 0, running: false, log: [] });
+  const [approvedCreds, setApprovedCreds] = useState<{ name: string; username: string; nasmedEmail: string; memberNumber: string; password: string } | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const initializeMemberAccounts = async () => {
     if (!confirm(`This will create Supabase auth accounts for all ${DEMO_MEMBERS_INIT.length} members. Existing accounts will be skipped. Continue?`)) return;
@@ -295,17 +297,33 @@ export default function AdminPage() {
     );
   }
 
-  const handleAction = (id: string, action: string) => {
+  const handleAction = async (id: string, action: string) => {
     const newStatus = action === "approve" ? "approved" : "rejected";
+
+    if (action === "approve") {
+      const app = applications.find(a => a.id === id);
+      if (app) {
+        setApprovingId(id);
+        const alreadyApproved = applications.filter(a => a.status === "approved").length;
+        const year = new Date().getFullYear().toString().slice(2);
+        const seq = (42 + alreadyApproved + 1).toString().padStart(4, "0");
+        const memberNumber = `NASMED/${year}/${seq}`;
+        const username = await authService.generateUniqueUsername(app.name);
+        const nasmedEmail = `${username}@nasmed.com`;
+        await authService.activateMember(app.email, username, memberNumber, "Member", app.tier);
+        setApprovedCreds({ name: app.name, username, nasmedEmail, memberNumber, password: "nasmed2024!" });
+        setApprovingId(null);
+      }
+    }
+
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
     if (viewApp?.id === id) setViewApp(prev => prev ? { ...prev, status: newStatus } : null);
-    // Sync back to localStorage so the status persists
     try {
       const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
       const updated = stored.map(a => a.id === id ? { ...a, status: newStatus } : a);
       localStorage.setItem("nasmed_applications", JSON.stringify(updated));
     } catch { /* ignore */ }
-    toast.success(action === "approve" ? "Application approved & member notified!" : "Application rejected & member notified.");
+    if (action !== "approve") toast.success("Application rejected & member notified.");
   };
 
   const addMember = () => {
@@ -534,8 +552,8 @@ export default function AdminPage() {
                             <div className="flex gap-1.5 items-center">
                               <button onClick={() => setViewApp(a)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
                               {a.status === "pending" && <>
-                                <button onClick={() => handleAction(a.id, "approve")} className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light">✓</button>
-                                <button onClick={() => handleAction(a.id, "reject")} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">✗</button>
+                                <button onClick={() => handleAction(a.id, "approve")} disabled={approvingId === a.id} className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light disabled:opacity-50">{approvingId === a.id ? "…" : "✓"}</button>
+                                <button onClick={() => handleAction(a.id, "reject")} disabled={!!approvingId} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600 disabled:opacity-50">✗</button>
                               </>}
                             </div>
                           </td>
@@ -929,15 +947,91 @@ export default function AdminPage() {
                 <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-3">Candidate Statement</p>
                 <div className="border border-nasmed-gray-light rounded-lg p-4 bg-nasmed-off-white/40 text-sm">{viewApp.statement}</div>
               </div>
+
+              {/* Payment Receipt */}
+              <div className="mt-6">
+                <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-3">Payment Receipt</p>
+                {(viewApp as any).receiptUrl ? (
+                  <div className="border border-nasmed-green/30 rounded-lg p-4 bg-nasmed-green/5 flex items-center gap-4">
+                    <span className="text-3xl">{((viewApp as any).receiptName || "").endsWith(".pdf") ? "📋" : "🖼️"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-nasmed-navy truncate">{(viewApp as any).receiptName || "Payment Receipt"}</p>
+                      <p className="text-[11px] text-nasmed-green font-semibold mt-0.5">Receipt submitted by applicant</p>
+                    </div>
+                    <a
+                      href={(viewApp as any).receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 bg-nasmed-navy text-white text-[12px] font-semibold py-2 px-4 rounded-lg hover:opacity-90 no-underline"
+                    >
+                      {((viewApp as any).receiptName || "").endsWith(".pdf") ? "Open PDF" : "View Image"}
+                    </a>
+                  </div>
+                ) : (
+                  <div className="border border-nasmed-gray-light rounded-lg p-4 bg-nasmed-off-white/40 text-[13px] text-nasmed-text-muted">
+                    No receipt uploaded yet.
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3 px-7 py-4 border-t border-nasmed-gray-light bg-white">
               <button onClick={() => setViewApp(null)} className="py-3 px-6 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold cursor-pointer hover:bg-nasmed-off-white bg-white">Close</button>
               {viewApp.status === "pending" && (
                 <>
-                  <button onClick={() => { handleAction(viewApp.id, "approve"); setViewApp(null); }} className="flex-1 py-3 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">✓ Approve</button>
-                  <button onClick={() => { handleAction(viewApp.id, "reject"); setViewApp(null); }} className="flex-1 py-3 rounded-lg bg-red-500 text-white border-none text-[14px] font-bold cursor-pointer hover:bg-red-600">✗ Reject</button>
+                  <button onClick={async () => { await handleAction(viewApp.id, "approve"); setViewApp(null); }} disabled={!!approvingId} className="flex-1 py-3 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light disabled:opacity-50">{approvingId === viewApp.id ? "Approving…" : "✓ Approve"}</button>
+                  <button onClick={() => { handleAction(viewApp.id, "reject"); setViewApp(null); }} disabled={!!approvingId} className="flex-1 py-3 rounded-lg bg-red-500 text-white border-none text-[14px] font-bold cursor-pointer hover:bg-red-600 disabled:opacity-50">✗ Reject</button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approved Credentials Modal */}
+      {approvedCreds && (
+        <div className="fixed inset-0 bg-black/70 z-[4000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[480px] shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue p-7 text-center">
+              <div className="text-4xl mb-3">🎉</div>
+              <h2 className="font-heading text-white text-[20px] mb-1">Application Approved</h2>
+              <p className="text-white/70 text-[13px]">{approvedCreds.name} is now an active member</p>
+            </div>
+            <div className="p-7 flex flex-col gap-4">
+              <p className="text-[13px] text-nasmed-text-muted text-center">Share these login credentials with the member. They will be required to change their password on first login.</p>
+              <div className="bg-nasmed-off-white rounded-xl p-5 flex flex-col gap-3 border border-nasmed-gray-light">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-nasmed-text-muted">Member No.</span>
+                  <code className="text-[13px] font-mono font-bold text-nasmed-navy">{approvedCreds.memberNumber}</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-nasmed-text-muted">Username</span>
+                  <code className="text-[13px] font-mono font-bold text-nasmed-navy">{approvedCreds.username}</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-nasmed-text-muted">NASMED ID</span>
+                  <code className="text-[13px] font-mono font-bold text-nasmed-mid-blue">{approvedCreds.nasmedEmail}</code>
+                </div>
+                <div className="flex justify-between items-center border-t border-nasmed-gray-light pt-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-nasmed-text-muted">Default Password</span>
+                  <code className="text-[13px] font-mono font-bold text-amber-600">{approvedCreds.password}</code>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const text = `NASMED Member Login Credentials\n\nMember No: ${approvedCreds.memberNumber}\nUsername: ${approvedCreds.username}\nNASMED ID: ${approvedCreds.nasmedEmail}\nPassword: ${approvedCreds.password}\n\nPlease log in at the NASMED Member Portal and change your password on first sign-in.`;
+                  navigator.clipboard?.writeText(text);
+                  toast.success("Credentials copied to clipboard!");
+                }}
+                className="w-full py-2.5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[13px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white"
+              >
+                Copy Credentials
+              </button>
+              <button
+                onClick={() => setApprovedCreds(null)}
+                className="w-full py-3 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

@@ -33,6 +33,24 @@ function LotusWatermark() {
   );
 }
 
+function PresidentSignature() {
+  return (
+    <svg width="150" height="42" viewBox="0 0 150 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
+      <path d="M 8,34 C 14,10 28,6 34,20 C 38,28 40,14 48,10 C 55,7 57,22 62,26 C 66,30 68,16 76,13 C 82,11 84,24 90,22 C 96,20 96,10 104,13 C 110,16 108,28 114,26 C 120,24 120,15 128,17 C 134,19 133,30 140,28" stroke="#1a3a6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M 6,37 Q 50,41 100,39 Q 125,38 144,36" stroke="#1a3a6e" strokeWidth="0.9" strokeLinecap="round" opacity="0.55"/>
+    </svg>
+  );
+}
+
+function SecretarySignature() {
+  return (
+    <svg width="150" height="42" viewBox="0 0 150 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
+      <path d="M 6,30 C 12,8 24,6 28,18 C 31,26 33,12 42,10 C 50,8 50,22 56,20 C 62,18 60,8 68,10 C 75,12 74,26 80,24 C 86,22 88,12 96,14 C 102,16 100,28 106,26 C 112,24 114,14 122,16 C 128,18 126,30 132,28 C 137,26 138,18 144,20" stroke="#1a3a6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M 4,35 C 6,32 10,38 20,36 Q 70,40 144,36" stroke="#1a3a6e" strokeWidth="0.9" strokeLinecap="round" opacity="0.55"/>
+    </svg>
+  );
+}
+
 // FIMS-style badge (CSS recreation — original not available as asset)
 function FimsBadge() {
   return (
@@ -139,16 +157,24 @@ export function CertificateFrame({ memberName, certNumber, date, membershipType 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "12px" }}>
           {/* President */}
           <div style={{ textAlign: "center", width: "180px" }}>
-            <div style={{ height: "36px", borderBottom: "1.5px solid #333", marginBottom: "6px" }} />
-            <span style={{ fontSize: "13px", color: "#444" }}>President</span>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
+              <PresidentSignature />
+            </div>
+            <div style={{ borderBottom: "1.5px solid #333", marginBottom: "5px" }} />
+            <span style={{ fontSize: "12px", fontWeight: "bold", color: "#1a3a6e", display: "block" }}>Dr. Olajide Joseph Adebola</span>
+            <span style={{ fontSize: "11px", color: "#666" }}>President, NASMED</span>
           </div>
 
           <NasmedSeal />
 
           {/* Secretary-General */}
           <div style={{ textAlign: "center", width: "180px" }}>
-            <div style={{ height: "36px", borderBottom: "1.5px solid #333", marginBottom: "6px" }} />
-            <span style={{ fontSize: "13px", color: "#444" }}>Secretary-General</span>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
+              <SecretarySignature />
+            </div>
+            <div style={{ borderBottom: "1.5px solid #333", marginBottom: "5px" }} />
+            <span style={{ fontSize: "12px", fontWeight: "bold", color: "#1a3a6e", display: "block" }}>Secretary-General</span>
+            <span style={{ fontSize: "11px", color: "#666" }}>Secretary-General, NASMED</span>
           </div>
         </div>
       </div>

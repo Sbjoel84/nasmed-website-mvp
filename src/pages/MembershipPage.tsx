@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import { applicationService } from "@/services/applicationService";
 import authService from "@/lib/authService";
+import supabase from "@/lib/supabaseClient";
 import PaystackPop from "@paystack/inline-js";
 import MembershipCertificate from "@/components/MembershipCertificate";
 
@@ -57,6 +58,11 @@ export default function MembershipPage() {
     return `NASMED/${yr}/${seq}`;
   });
   const [currentAppId, setCurrentAppId] = useState("");
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptName, setReceiptName] = useState("");
+  const [receiptUploading, setReceiptUploading] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
+  const receiptInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
 
   // Simple payment modal state (Additional Contributions)
@@ -71,6 +77,7 @@ export default function MembershipPage() {
     ref1Name: "", ref1Email: "", ref1Mobile: "",
     ref2Name: "", ref2Email: "", ref2Mobile: "",
     statement: "", agreed: false,
+    institution: "", programme: "", graduationDate: "", admissionLetter: "",
   });
 
   useEffect(() => {
@@ -221,6 +228,8 @@ export default function MembershipPage() {
         .then(({ error }) => {
           if (error && !error.toLowerCase().includes("already registered")) {
             console.warn("Supabase account creation failed:", error);
+          } else {
+            authService.setInitialUsername(formData.email, formData.fullName).catch(() => {});
           }
         })
         .catch(() => {});
@@ -265,6 +274,34 @@ export default function MembershipPage() {
     "Fellow (FNASMED)": 25000000,
     "International Membership": 5000,   // $50 in USD cents
     "Annual Dues": 2500000,
+  };
+
+  const handleReceiptUpload = async (file: File) => {
+    setReceiptUploading(true);
+    setReceiptError("");
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `receipts/${currentAppId || Date.now()}-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
+      setReceiptUrl(publicUrl);
+      setReceiptName(file.name);
+      // Update the localStorage app entry with the receipt URL
+      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
+      const idx = stored.findIndex(a => a.id === currentAppId);
+      if (idx >= 0) {
+        stored[idx].receiptUrl = publicUrl;
+        stored[idx].receiptName = file.name;
+        stored[idx].payment = "Receipt Uploaded";
+        localStorage.setItem("nasmed_applications", JSON.stringify(stored));
+      }
+      toast.success("Receipt uploaded successfully!");
+    } catch {
+      setReceiptError("Upload failed. Please ensure a 'receipts' storage bucket exists in Supabase, or email your receipt to info@nasmed.org.");
+    } finally {
+      setReceiptUploading(false);
+    }
   };
 
   const saveTransaction = (ref: string, method: string, status: string) => {
@@ -607,23 +644,23 @@ export default function MembershipPage() {
                               <p className="text-[12px] text-yellow-800 font-semibold">🎓 Student Membership is for undergraduate programmes only. Postgraduate or other students must register as Individual Member. Your membership expires at the end of your programme. An admission letter is required.</p>
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-semibold text-nasmed-navy">Institution / University <span className="text-red-600">*</span></label>
-                                <input type="text" value={(formData as any).institution || ""} onChange={e => updateField('institution', e.target.value)} placeholder="e.g. University of Lagos" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                                <input type="text" value={formData.institution || ""} onChange={e => updateField('institution', e.target.value)} placeholder="e.g. University of Lagos" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
                               </div>
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-semibold text-nasmed-navy">Undergraduate Programme <span className="text-red-600">*</span></label>
-                                <input type="text" value={(formData as any).programme || ""} onChange={e => updateField('programme', e.target.value)} placeholder="e.g. MBBS, BSc Sports Science, BPharm" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                                <input type="text" value={formData.programme || ""} onChange={e => updateField('programme', e.target.value)} placeholder="e.g. MBBS, BSc Sports Science, BPharm" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
                               </div>
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-semibold text-nasmed-navy">Expected Graduation Date <span className="text-red-600">*</span></label>
-                                <input type="month" value={(formData as any).graduationDate || ""} onChange={e => updateField('graduationDate', e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
+                                <input type="month" value={formData.graduationDate || ""} onChange={e => updateField('graduationDate', e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue transition-colors" />
                               </div>
                               <div className="flex flex-col gap-1.5">
                                 <label className="text-[13px] font-semibold text-nasmed-navy">Admission Letter <span className="text-red-600">*</span></label>
-                                <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${(formData as any).admissionLetter ? "border-yellow-400 bg-yellow-50" : "border-nasmed-gray-light hover:border-yellow-400"}`}>
-                                  <span className="text-xl">{(formData as any).admissionLetter ? "📄" : "📎"}</span>
+                                <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${formData.admissionLetter ? "border-yellow-400 bg-yellow-50" : "border-nasmed-gray-light hover:border-yellow-400"}`}>
+                                  <span className="text-xl">{formData.admissionLetter ? "📄" : "📎"}</span>
                                   <div className="flex-1 min-w-0">
-                                    {(formData as any).admissionLetter
-                                      ? <p className="text-sm font-semibold text-nasmed-navy truncate">{(formData as any).admissionLetter}</p>
+                                    {formData.admissionLetter
+                                      ? <p className="text-sm font-semibold text-nasmed-navy truncate">{formData.admissionLetter}</p>
                                       : <><p className="text-sm text-nasmed-text-muted">Upload admission letter (JPG, PNG, PDF)</p><p className="text-xs text-nasmed-text-muted">Must clearly show your name, institution & programme</p></>
                                     }
                                   </div>
@@ -809,8 +846,49 @@ export default function MembershipPage() {
                         </div>
                       </div>
 
+                      {/* Receipt Upload */}
+                      <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden">
+                        <div className="bg-nasmed-green/8 px-5 py-3 flex items-center gap-3 border-b border-nasmed-green/20">
+                          <span className="text-[18px]">📄</span>
+                          <div>
+                            <span className="font-bold text-[14px] text-nasmed-navy">Upload Payment Receipt</span>
+                            <p className="text-[11px] text-nasmed-text-muted mt-0.5">PDF, JPG, or PNG — max 5MB</p>
+                          </div>
+                        </div>
+                        <div className="p-5">
+                          {receiptUrl ? (
+                            <div className="flex items-center gap-3 bg-nasmed-green/10 border border-nasmed-green/30 rounded-lg px-4 py-3">
+                              <span className="text-2xl">{receiptName.endsWith(".pdf") ? "📋" : "🖼️"}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-semibold text-nasmed-navy truncate">{receiptName}</p>
+                                <p className="text-[11px] text-nasmed-green font-semibold">Receipt uploaded successfully</p>
+                              </div>
+                              <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-[12px] text-nasmed-mid-blue font-semibold hover:underline shrink-0">View</a>
+                              <button type="button" onClick={() => { setReceiptUrl(""); setReceiptName(""); }} className="text-[11px] text-nasmed-text-muted hover:text-red-500 bg-transparent border-none cursor-pointer shrink-0">Replace</button>
+                            </div>
+                          ) : (
+                            <label className={`flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${receiptUploading ? "border-nasmed-mid-blue bg-nasmed-mid-blue/5" : "border-nasmed-gray-light hover:border-nasmed-green hover:bg-nasmed-green/5"}`}>
+                              <span className="text-3xl">{receiptUploading ? "⏳" : "📎"}</span>
+                              <div className="text-center">
+                                <p className="text-[13px] font-semibold text-nasmed-navy">{receiptUploading ? "Uploading…" : "Click to upload your payment receipt"}</p>
+                                <p className="text-[11px] text-nasmed-text-muted mt-1">Bank transfer slip, online receipt, or payment screenshot</p>
+                              </div>
+                              <input
+                                ref={receiptInputRef}
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                className="hidden"
+                                disabled={receiptUploading}
+                                onChange={e => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }}
+                              />
+                            </label>
+                          )}
+                          {receiptError && <p className="text-[12px] text-red-600 mt-3 leading-relaxed">{receiptError}</p>}
+                        </div>
+                      </div>
+
                       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-[12px] text-amber-800 leading-relaxed">
-                        <strong>Note:</strong> After completing your payment, please send proof of payment (receipt or screenshot) along with your full name to <strong>info@nasmed.org</strong>. Your membership will be activated once payment is confirmed.
+                        <strong>Note:</strong> Upload your payment receipt above. Your membership will be activated once payment is confirmed by the admin. You may also email your receipt to <strong>info@nasmed.org</strong>.
                       </div>
                     </div>
                   )}

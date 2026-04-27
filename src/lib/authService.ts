@@ -1,6 +1,17 @@
 import supabase from './supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
+function toUsernameBase(fullName: string): string {
+  const cleaned = fullName
+    .replace(/^(Dr\.|Prof\.|Mrs\.|Mr\.|Ms\.|PT\.|Pharm\.|Engr\.)\s*/gi, '')
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .trim();
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] || 'member';
+  return `${parts[0]}.${parts[parts.length - 1]}`;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -283,6 +294,53 @@ export const authService = {
 
   onAuthStateChange(callback: (event: string, session: Session | null) => void) {
     return supabase.auth.onAuthStateChange(callback);
+  },
+
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return !error;
+    } catch {
+      return false;
+    }
+  },
+
+  async generateUniqueUsername(fullName: string): Promise<string> {
+    const base = toUsernameBase(fullName);
+    const { data } = await supabase.from('profiles').select('username').eq('username', base).maybeSingle();
+    if (!data) return base;
+    for (let i = 2; i <= 99; i++) {
+      const candidate = `${base}${i}`;
+      const { data: d } = await supabase.from('profiles').select('username').eq('username', candidate).maybeSingle();
+      if (!d) return candidate;
+    }
+    return `${base}${Date.now()}`;
+  },
+
+  async activateMember(
+    email: string,
+    username: string,
+    memberNumber: string,
+    position: string,
+    membershipType: string,
+  ): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username, member_number: memberNumber, position, membership_type: membershipType, must_change_password: true, status: 'active' })
+        .eq('email', email);
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch {
+      return { error: 'An unexpected error occurred' };
+    }
+  },
+
+  async setInitialUsername(email: string, fullName: string): Promise<void> {
+    try {
+      const username = await authService.generateUniqueUsername(fullName);
+      await supabase.from('profiles').update({ username }).eq('email', email);
+    } catch { /* best-effort */ }
   },
 };
 

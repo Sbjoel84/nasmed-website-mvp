@@ -27,6 +27,8 @@ export default function MemberLoginPage() {
   const [newPass, setNewPass] = useState("");
   const [confPass, setConfPass] = useState("");
   const [passErr, setPassErr] = useState("");
+  const [passChanging, setPassChanging] = useState(false);
+  const [passChanged, setPassChanged] = useState(false);
 
   // Forced first-login password change state
   const [forcedNewPass, setForcedNewPass] = useState("");
@@ -88,16 +90,27 @@ export default function MemberLoginPage() {
   };
 
   const handleChangePassword = async () => {
-    if (oldPass.length < 8) { setPassErr("Current password is required."); return; }
+    if (!oldPass) { setPassErr("Current password is required."); return; }
     if (newPass.length < 8) { setPassErr("New password must be at least 8 characters."); return; }
-    if (newPass !== confPass) { setPassErr("New passwords do not match."); return; }
+    if (newPass !== confPass) { setPassErr("Passwords do not match."); return; }
+    if (newPass === oldPass) { setPassErr("New password must be different from current password."); return; }
     setPassErr("");
+    setPassChanging(true);
+    const valid = await authService.verifyPassword(user!.email, oldPass);
+    if (!valid) {
+      setPassErr("Current password is incorrect.");
+      setPassChanging(false);
+      return;
+    }
     const { error } = await updatePassword(newPass);
+    setPassChanging(false);
     if (error) {
       setPassErr(error);
     } else {
-      toast.success("Password updated successfully!");
+      setPassChanged(true);
       setOldPass(""); setNewPass(""); setConfPass("");
+      toast.success("Password updated successfully!");
+      setTimeout(() => setPassChanged(false), 5000);
     }
   };
 
@@ -292,25 +305,73 @@ export default function MemberLoginPage() {
 
           {/* Change Password */}
           <div className="bg-white rounded-[14px] p-8 shadow-sm border border-nasmed-gray-light">
-            <h3 className="font-heading text-xl text-nasmed-navy mb-1.5">Change Password</h3>
-            <p className="text-nasmed-text-muted text-[13px] mb-6">Choose a strong password with at least 8 characters.</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 mb-1.5">
+              <h3 className="font-heading text-xl text-nasmed-navy">Change Password</h3>
+              {passChanged && (
+                <span className="text-[12px] font-semibold text-nasmed-green bg-nasmed-green/10 px-3 py-1 rounded-full">
+                  ✓ Password updated
+                </span>
+              )}
+            </div>
+            <p className="text-nasmed-text-muted text-[13px] mb-6">
+              Enter your current password to set a new one. Must be at least 8 characters.
+            </p>
+
+            <div className="flex flex-col gap-4 max-w-[520px]">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-semibold text-nasmed-navy">Current Password</label>
-                <input type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} placeholder="Current password" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm" />
+                <input
+                  type="password"
+                  value={oldPass}
+                  onChange={e => { setOldPass(e.target.value); setPassErr(""); }}
+                  placeholder="Your current password"
+                  disabled={passChanging}
+                  className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue disabled:opacity-50"
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-semibold text-nasmed-navy">New Password</label>
-                <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min 8 characters" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm" />
+                <input
+                  type="password"
+                  value={newPass}
+                  onChange={e => { setNewPass(e.target.value); setPassErr(""); }}
+                  placeholder="Min 8 characters"
+                  disabled={passChanging}
+                  className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue disabled:opacity-50"
+                />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-semibold text-nasmed-navy">Confirm Password</label>
-                <input type="password" value={confPass} onChange={e => setConfPass(e.target.value)} placeholder="Repeat new password" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm" />
+                <label className="text-[13px] font-semibold text-nasmed-navy">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confPass}
+                  onChange={e => { setConfPass(e.target.value); setPassErr(""); }}
+                  placeholder="Repeat new password"
+                  disabled={passChanging}
+                  className={`py-2.5 px-3.5 border-[1.5px] rounded-lg text-sm outline-none transition-colors disabled:opacity-50 ${
+                    confPass && newPass !== confPass
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-nasmed-gray-light focus:border-nasmed-mid-blue"
+                  }`}
+                />
+                {confPass && newPass !== confPass && (
+                  <p className="text-[11px] text-red-500">Passwords do not match</p>
+                )}
               </div>
             </div>
-            {passErr && <div className="bg-red-500/10 text-red-600 text-[13px] py-2 px-3 rounded-lg mt-3">{passErr}</div>}
-            <button onClick={handleChangePassword} className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light mt-5">
-              Update Password
+
+            {passErr && (
+              <div className="bg-red-500/10 text-red-600 text-[13px] py-2.5 px-3.5 rounded-lg mt-4 max-w-[520px]">
+                {passErr}
+              </div>
+            )}
+
+            <button
+              onClick={handleChangePassword}
+              disabled={passChanging || !oldPass || newPass.length < 8 || newPass !== confPass}
+              className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light mt-5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {passChanging ? "Verifying & Updating…" : "Update Password"}
             </button>
           </div>
         </div>

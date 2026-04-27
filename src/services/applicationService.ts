@@ -20,6 +20,7 @@ export interface Application {
   statement: string;
   status: 'pending' | 'approved' | 'rejected';
   payment_status: 'pending' | 'paid';
+  payment_receipt_url?: string;
 }
 
 export const applicationService = {
@@ -35,7 +36,7 @@ export const applicationService = {
 
   async checkTableExists(): Promise<boolean> {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('applications')
         .select('id', { count: 'exact' })
         .limit(1);
@@ -119,7 +120,6 @@ export const applicationService = {
         code: error.code,
         details: error.details,
         hint: error.hint,
-        status: error.status,
       });
       throw error;
     }
