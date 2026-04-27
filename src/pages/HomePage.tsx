@@ -47,7 +47,7 @@ export default function HomePage() {
   return (
     <div>
       {/* HERO */}
-      <section className="relative h-screen min-h-[640px] flex items-center overflow-hidden">
+      <section id="hero" className="relative h-screen min-h-[640px] flex items-center overflow-hidden">
         {heroSlides.map((slide, i) => (
           <div
             key={i}

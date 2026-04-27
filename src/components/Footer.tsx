@@ -19,8 +19,13 @@ export default function Footer() {
           </div>
           <p className="text-sm leading-relaxed mb-5">Promoting excellence in sports and exercise medicine across Nigeria and Africa since 1988. <em>Mens sana in corpore sano.</em></p>
           <div className="flex gap-2.5">
-            {["in", "tw", "fb", "yt"].map((s) => (
-              <a key={s} href="#" className="w-[34px] h-[34px] rounded-lg bg-white/10 flex items-center justify-center text-white/60 no-underline text-[13px] font-bold hover:bg-nasmed-green hover:text-white transition-all">{s}</a>
+            {[
+              { label: "in", href: "https://www.linkedin.com/groups/8593132", external: true },
+              { label: "𝕏", href: "https://x.com/OfficialNASMED", external: true },
+              { label: "fb", href: "/#hero", external: false },
+              { label: "yt", href: "https://www.youtube.com/channel/UCxTE2Nodo5G-0iD_2eWwpRQ/videos", external: true },
+            ].map(({ label, href, external }) => (
+              <a key={label} href={href} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})} className="w-[34px] h-[34px] rounded-lg bg-white/10 flex items-center justify-center text-white/60 no-underline text-[13px] font-bold hover:bg-nasmed-green hover:text-white transition-all">{label}</a>
             ))}
           </div>
         </div>
