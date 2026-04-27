@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import sitemap from "vite-plugin-sitemap";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
@@ -11,7 +12,22 @@ export default defineConfig(() => ({
       overlay: false,
     },
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    sitemap({
+      hostname: "https://nasmed.ng",
+      dynamicRoutes: [
+        "/",
+        "/about",
+        "/strategic-plan",
+        "/membership",
+        "/publications",
+        "/store",
+        "/contact",
+        "/news",
+      ],
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
