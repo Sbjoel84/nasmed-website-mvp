@@ -11,6 +11,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<{ error: string | null }>;
   markPasswordChanged: () => Promise<{ error: string | null }>;
+  refreshUser: () => Promise<void>;
+  setUserField: (updates: Partial<AuthUser>) => void;
   isAdmin: boolean;
   isMember: boolean;
   mustChangePassword: boolean;
@@ -27,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     const initializeAuth = async () => {
-      const timer = setTimeout(() => { if (mounted) setLoading(false); }, 3000);
+      const timer = setTimeout(() => { if (mounted) setLoading(false); }, 1500);
       try {
         const session = await authService.getSession();
         if (session && mounted) {
@@ -45,11 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = authService.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const currentUser = await authService.getCurrentUser();
-        if (mounted) {
-          setUser(currentUser);
-          setSession(session);
-        }
+        // Only fetch the profile when the context has no user yet (e.g. a tab
+        // that regains focus or an external auth trigger). Explicit logins go
+        // through AuthContext.signIn which already sets both user and session,
+        // so re-fetching here would just be a wasted round-trip.
+        if (mounted) setSession(session);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        if (mounted) setSession(session);
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setUser(null);
@@ -65,12 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { user, error } = await authService.signIn(email, password);
+    const { user, session, error } = await authService.signIn(email, password);
     if (error) return { error };
     if (user) {
       setUser(user);
-      const session = await authService.getSession();
-      setSession(session);
+      if (session) setSession(session);
     }
     return { error: null };
   };
@@ -100,6 +103,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   };
 
+  const refreshUser = async () => {
+    const currentUser = await authService.getCurrentUser();
+    if (currentUser) setUser(currentUser);
+  };
+
+  const setUserField = (updates: Partial<AuthUser>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
   const isAdmin = user?.role === 'admin';
   const isMember = user?.role === 'member' || isAdmin;
   const mustChangePassword = user?.must_change_password === true;
@@ -115,6 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updatePassword,
         markPasswordChanged,
+        refreshUser,
+        setUserField,
         isAdmin,
         isMember,
         mustChangePassword,

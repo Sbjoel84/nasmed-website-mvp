@@ -22,6 +22,7 @@ export interface AuthUser {
   must_change_password?: boolean;
   member_number?: string;
   position?: string;
+  avatar_url?: string;
 }
 
 export const authService = {
@@ -333,6 +334,31 @@ export const authService = {
       return { error: null };
     } catch {
       return { error: 'An unexpected error occurred' };
+    }
+  },
+
+  async updateProfile(userId: string, updates: { full_name?: string }): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch {
+      return { error: 'An unexpected error occurred' };
+    }
+  },
+
+  async uploadAvatar(userId: string, file: File): Promise<{ url: string | null; error: string | null }> {
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const fileName = `${userId}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) return { url: null, error: uploadError.message };
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      return { url: publicUrl, error: null };
+    } catch {
+      return { url: null, error: 'Upload failed' };
     }
   },
 

@@ -7,6 +7,7 @@ import authService from "@/lib/authService";
 import supabase from "@/lib/supabaseClient";
 import PaystackPop from "@paystack/inline-js";
 import MembershipCertificate from "@/components/MembershipCertificate";
+import MemberBenefitsSection from "@/components/MemberBenefitsSection";
 
 const nigerianStates = [
   "Abuja (FCT)", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -63,6 +64,14 @@ export default function MembershipPage() {
   const [receiptUploading, setReceiptUploading] = useState(false);
   const [receiptError, setReceiptError] = useState("");
   const receiptInputRef = useRef<HTMLInputElement>(null);
+  const plansRef = useRef<HTMLElement>(null);
+
+  // Receipt upload state for Additional Contributions simple pay
+  const [simpleReceiptUrl, setSimpleReceiptUrl] = useState("");
+  const [simpleReceiptName, setSimpleReceiptName] = useState("");
+  const [simpleReceiptUploading, setSimpleReceiptUploading] = useState(false);
+  const [simpleReceiptError, setSimpleReceiptError] = useState("");
+  const [simplePayTxnRef, setSimplePayTxnRef] = useState("");
   const [step, setStep] = useState(1);
 
   // Simple payment modal state (Additional Contributions)
@@ -130,6 +139,8 @@ export default function MembershipPage() {
 
   const saveSimpleTransaction = (ref: string, method: string, status: string) => {
     try {
+      setSimplePayTxnRef(ref);
+      setSimpleReceiptUrl(""); setSimpleReceiptName("");
       const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
       txns.unshift({
         ref,
@@ -142,9 +153,32 @@ export default function MembershipPage() {
         status,
         description: simplePayData.description || "",
         date: new Date().toLocaleDateString("en-GB"),
+        type: "contribution",
       });
       localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
     } catch { /* ignore */ }
+  };
+
+  const handleSimpleReceiptUpload = async (file: File) => {
+    setSimpleReceiptUploading(true);
+    setSimpleReceiptError("");
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `receipts/contrib-${simplePayTxnRef || Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
+      setSimpleReceiptUrl(publicUrl);
+      setSimpleReceiptName(file.name);
+      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
+      const idx = txns.findIndex(t => t.ref === simplePayTxnRef);
+      if (idx >= 0) { txns[idx].receiptUrl = publicUrl; txns[idx].receiptName = file.name; localStorage.setItem("nasmed_transactions", JSON.stringify(txns)); }
+      toast.success("Receipt uploaded!");
+    } catch {
+      setSimpleReceiptError("Upload failed. Ensure a 'receipts' bucket exists in Supabase, or email receipt to info@nasmed.org.");
+    } finally {
+      setSimpleReceiptUploading(false);
+    }
   };
 
   const handleSimplePaystack = () => {
@@ -327,6 +361,8 @@ export default function MembershipPage() {
         method,
         status,
         date: new Date().toLocaleDateString("en-GB"),
+        type: "membership",
+        appId: currentAppId,
       });
       localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
     } catch { /* ignore */ }
@@ -415,8 +451,14 @@ export default function MembershipPage() {
         </div>
       </section>
 
+      {/* WHY JOIN — member benefits section */}
+      <MemberBenefitsSection
+        onBecomeMember={() => selectPlan("")}
+        onViewPlans={() => plansRef.current?.scrollIntoView({ behavior: "smooth" })}
+      />
+
       {/* MEMBERSHIP PLANS */}
-      <section className="py-20 px-6 md:px-12 max-w-[1280px] mx-auto">
+      <section ref={plansRef} className="py-20 px-6 md:px-12 max-w-[1280px] mx-auto">
         <div className="section-label">Choose Your Plan</div>
         <h2 className="section-title">Membership Plans</h2>
         <p className="section-sub">Select a plan to begin your registration.</p>
@@ -1079,21 +1121,53 @@ export default function MembershipPage() {
 
               {/* Step 3 — Success */}
               {simplePayStep === 3 && (
-                <div className="p-10 text-center">
-                  <div className="text-5xl mb-4">🎉</div>
-                  <h3 className="font-heading text-nasmed-navy text-[22px] mb-2">Thank You!</h3>
-                  <p className="text-nasmed-text-muted text-[13px] leading-relaxed mb-2">
-                    Your <strong>{simplePayItem.label}</strong> payment of <strong>₦{Number(simplePayData.amount).toLocaleString()}</strong> has been received.
-                  </p>
-                  {simplePayData.description && (
-                    <p className="text-[13px] text-nasmed-text-muted italic mb-3">"{simplePayData.description}"</p>
+                <div className="p-8 flex flex-col gap-5">
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">🎉</div>
+                    <h3 className="font-heading text-nasmed-navy text-[22px] mb-2">Thank You!</h3>
+                    <p className="text-nasmed-text-muted text-[13px] leading-relaxed">
+                      Your <strong>{simplePayItem.label}</strong> payment of <strong>₦{Number(simplePayData.amount).toLocaleString()}</strong> has been recorded.
+                    </p>
+                    {simplePayData.description && (
+                      <p className="text-[12px] text-nasmed-text-muted italic mt-1">"{simplePayData.description}"</p>
+                    )}
+                  </div>
+
+                  {/* Receipt upload — shown only for bank transfers */}
+                  {simplePayTxnRef.startsWith("BNK-") && (
+                    <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden">
+                      <div className="bg-nasmed-green/8 px-4 py-3 flex items-center gap-2 border-b border-nasmed-green/20">
+                        <span className="text-[16px]">📄</span>
+                        <span className="font-bold text-[13px] text-nasmed-navy">Upload Payment Receipt <span className="font-normal text-nasmed-text-muted">(optional)</span></span>
+                      </div>
+                      <div className="p-4">
+                        {simpleReceiptUrl ? (
+                          <div className="flex items-center gap-3 bg-nasmed-green/10 border border-nasmed-green/30 rounded-lg px-3 py-2.5">
+                            <span className="text-xl">{simpleReceiptName.endsWith(".pdf") ? "📋" : "🖼️"}</span>
+                            <p className="text-[12px] font-semibold text-nasmed-navy flex-1 truncate">{simpleReceiptName}</p>
+                            <a href={simpleReceiptUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-nasmed-mid-blue font-semibold hover:underline shrink-0">View</a>
+                          </div>
+                        ) : (
+                          <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${simpleReceiptUploading ? "border-nasmed-mid-blue" : "border-nasmed-gray-light hover:border-nasmed-green"}`}>
+                            <span className="text-2xl">{simpleReceiptUploading ? "⏳" : "📎"}</span>
+                            <div>
+                              <p className="text-[13px] font-semibold text-nasmed-navy">{simpleReceiptUploading ? "Uploading…" : "Upload bank transfer receipt"}</p>
+                              <p className="text-[11px] text-nasmed-text-muted">PDF, JPG, or PNG</p>
+                            </div>
+                            <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={simpleReceiptUploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleSimpleReceiptUpload(f); }} />
+                          </label>
+                        )}
+                        {simpleReceiptError && <p className="text-[11px] text-red-600 mt-2">{simpleReceiptError}</p>}
+                      </div>
+                    </div>
                   )}
-                  <p className="text-[12px] text-nasmed-text-muted mb-7">
-                    A confirmation will be sent to <strong>{simplePayData.email}</strong> once payment is verified.
+
+                  <p className="text-[12px] text-nasmed-text-muted text-center">
+                    A confirmation will be sent to <strong>{simplePayData.email}</strong> once payment is verified by admin.
                   </p>
                   <button
                     onClick={closeSimplePay}
-                    className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                    className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all w-full"
                   >
                     Done
                   </button>

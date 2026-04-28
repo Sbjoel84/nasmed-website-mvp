@@ -132,19 +132,13 @@ const DEMO_PUBLICATIONS = [
   { id: "PUB-005", title: "NASMED Newsletter - January 2025", type: "Newsletter", date: "Jan 2025", downloads: 123, status: "draft", access: "free", price: "", fileName: "" },
 ];
 
-const DEMO_SUBSCRIPTIONS = [
-  { id: "SUB-001", member: "Prof. Adamu Ibrahim", tier: "Fellow (FNASMED)", start: "Jan 2024", expiry: "Jan 2025", status: "active", amount: "₦50,000" },
-  { id: "SUB-002", member: "Dr. Folake Adeyemi", tier: "Fellow (FNASMED)", start: "Mar 2024", expiry: "Mar 2025", status: "active", amount: "₦50,000" },
-  { id: "SUB-003", member: "Dr. Chukwuma Obi", tier: "Professional Member", start: "Jul 2024", expiry: "Jul 2025", status: "active", amount: "₦30,000" },
-  { id: "SUB-004", member: "Dr. Bola Adeyemo", tier: "Professional Member", start: "Apr 2023", expiry: "Apr 2024", status: "expired", amount: "₦30,000" },
-  { id: "SUB-005", member: "Dr. Uche Nwankwo", tier: "Associate Member", start: "May 2023", expiry: "May 2024", status: "expired", amount: "₦15,000" },
-];
-
-const DEMO_RENEWALS = [
-  { id: "NAS-0012", name: "Dr. Bola Adeyemo", tier: "Professional Member", expiry: "Apr 15, 2024", days: 12 },
-  { id: "NAS-0018", name: "Dr. Uche Nwankwo", tier: "Associate Member", expiry: "Apr 20, 2024", days: 17 },
-  { id: "NAS-0025", name: "Dr. Fatima Ali", tier: "Fellow (FNASMED)", expiry: "May 01, 2024", days: 28 },
-];
+const TIER_AMOUNTS: Record<string, string> = {
+  "Fellow (FNASMED)": "₦250,000",
+  "Individual Member": "₦25,000",
+  "Associate Member": "₦150,000",
+  "Student Membership": "₦2,500",
+  "International Membership": "$50",
+};
 
 const nigerianStates = [
   "Abuja (FCT)", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
@@ -155,7 +149,7 @@ const nigerianStates = [
 
 type App = typeof DEMO_APPS[0];
 type Publication = typeof DEMO_PUBLICATIONS[0];
-type Subscription = typeof DEMO_SUBSCRIPTIONS[0];
+type Subscription = { id: string; member: string; tier: string; start: string; expiry: string; status: string; amount: string };
 
 const LOCAL_ADMIN_PASSWORD = "nasmed@admin2024";
 
@@ -182,9 +176,21 @@ export default function AdminPage() {
   });
   const [members, setMembers] = useState(DEMO_MEMBERS_INIT);
   const [publications, setPublications] = useState(DEMO_PUBLICATIONS);
-  const [subscriptions, setSubscriptions] = useState(DEMO_SUBSCRIPTIONS);
   const [search, setSearch] = useState("");
-  const [totalMembers, setTotalMembers] = useState(1433);
+
+  const subscriptions: Subscription[] = members.map(m => {
+    const parts = m.joined.split(" ");
+    const expiry = parts.length === 2 ? `${parts[0]} ${parseInt(parts[1]) + 1}` : m.joined;
+    return {
+      id: m.id,
+      member: m.name,
+      tier: m.tier,
+      start: m.joined,
+      expiry,
+      status: m.status,
+      amount: TIER_AMOUNTS[m.tier] ?? "₦25,000",
+    };
+  });
   const [viewApp, setViewApp] = useState<App | null>(null);
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
@@ -203,6 +209,7 @@ export default function AdminPage() {
   const [transactions, setTransactions] = useState<Record<string, unknown>[]>(() => {
     try { return JSON.parse(localStorage.getItem("nasmed_transactions") || "[]"); } catch { return []; }
   });
+  const [txnTypeFilter, setTxnTypeFilter] = useState<"all" | "membership" | "contribution">("all");
 
   const canAccess = localAuth || (!loading && isAdmin);
 
@@ -312,6 +319,21 @@ export default function AdminPage() {
         const nasmedEmail = `${username}@nasmed.com`;
         await authService.activateMember(app.email, username, memberNumber, "Member", app.tier);
         setApprovedCreds({ name: app.name, username, nasmedEmail, memberNumber, password: "nasmed2024!" });
+        const newMember = {
+          id: memberNumber,
+          name: app.name,
+          username,
+          email: app.email,
+          password: "nasmed2024!",
+          prof: app.prof,
+          tier: app.tier,
+          state: app.state,
+          joined: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+          status: "active",
+          position: "Member",
+          mustChange: true,
+        };
+        setMembers(prev => prev.some(m => m.email === app.email) ? prev : [newMember, ...prev]);
         setApprovingId(null);
       }
     }
@@ -329,7 +351,7 @@ export default function AdminPage() {
   const addMember = () => {
     if (!afFname || !afLname) { toast.error("Please fill in required fields."); return; }
     const m = {
-      id: "NAS-" + (totalMembers + 1).toString().padStart(4, "0"),
+      id: "NAS-" + (members.length + 1).toString().padStart(4, "0"),
       name: "Dr. " + afFname + " " + afLname,
       username: (afFname + "." + afLname).toLowerCase(),
       password: "nasmed2024",
@@ -339,9 +361,18 @@ export default function AdminPage() {
       status: "active", position: "", mustChange: true,
     };
     setMembers(prev => [m, ...prev]);
-    setTotalMembers(prev => prev + 1);
     toast.success(`Member ${m.name} registered!`);
     setAfFname(""); setAfLname(""); setAfEmail(""); setAfPhone(""); setAfProf("");
+  };
+
+  const handleConfirmTransaction = (ref: string) => {
+    try {
+      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
+      const updated = txns.map(t => t.ref === ref ? { ...t, status: "confirmed" } : t);
+      localStorage.setItem("nasmed_transactions", JSON.stringify(updated));
+      setTransactions(updated);
+      toast.success("Payment confirmed successfully!");
+    } catch { /* ignore */ }
   };
 
   const deleteMember = (id: string) => {
@@ -465,7 +496,7 @@ export default function AdminPage() {
               <p className="text-nasmed-text-muted text-sm mb-7">Welcome back. Here's a summary of NASMED activity.</p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-9">
                 {[
-                  { num: totalMembers.toLocaleString(), label: "Total Members", trend: "↑ +23 this month", color: "border-nasmed-mid-blue" },
+                  { num: members.length.toLocaleString(), label: "Total Members", trend: `${members.length} registered`, color: "border-nasmed-mid-blue" },
                   { num: String(pendingCount), label: "Pending Applications", trend: "Needs Review", color: "border-nasmed-green", trendColor: "text-amber-500" },
                   { num: String(approvedCount), label: "Approved This Month", trend: "↑ New Members", color: "border-amber-500" },
                   { num: String(subscriptions.filter(s => s.status === "active").length), label: "Active Subscriptions", trend: "Revenue: ₦1.2M", color: "border-nasmed-green", trendColor: "text-nasmed-green" },
@@ -779,7 +810,7 @@ export default function AdminPage() {
           {activeSection === "transactions" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Transactions</h2>
-              <p className="text-nasmed-text-muted text-sm mb-7">All payment records from membership registrations. Bank transfer payments are settled directly to the accounts below.</p>
+              <p className="text-nasmed-text-muted text-sm mb-7">All payment records — membership registrations and additional contributions. Confirm bank transfers after verifying receipt.</p>
 
               {/* Bank Account Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -805,51 +836,127 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Summary cards */}
+              {(() => {
+                const all = transactions;
+                const pending = all.filter(t => t.status === "awaiting_confirmation");
+                const confirmed = all.filter(t => t.status === "confirmed");
+                const contributions = all.filter(t => t.type === "contribution");
+                return (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    {[
+                      { label: "Total Payments", value: all.length, color: "border-nasmed-mid-blue" },
+                      { label: "Awaiting Confirmation", value: pending.length, color: "border-amber-500" },
+                      { label: "Confirmed", value: confirmed.length, color: "border-nasmed-green" },
+                      { label: "Contributions", value: contributions.length, color: "border-purple-500" },
+                    ].map(c => (
+                      <div key={c.label} className={`bg-white rounded-xl p-4 shadow-sm border-t-4 ${c.color}`}>
+                        <div className="text-2xl font-bold text-nasmed-navy">{c.value}</div>
+                        <div className="text-[12px] text-nasmed-text-muted mt-0.5">{c.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
               {/* Transaction Records */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-base font-bold text-nasmed-navy">Payment Records</h3>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-nasmed-navy">Payment Records</h3>
+                    {/* Type filter tabs */}
+                    <div className="flex gap-1 ml-2">
+                      {(["all", "membership", "contribution"] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setTxnTypeFilter(f)}
+                          className={`text-[11px] font-bold px-3 py-1 rounded-full border cursor-pointer transition-all ${txnTypeFilter === f ? "bg-nasmed-navy text-white border-nasmed-navy" : "bg-transparent text-nasmed-text-muted border-nasmed-gray-light hover:border-nasmed-navy hover:text-nasmed-navy"}`}
+                        >
+                          {f === "all" ? "All" : f === "membership" ? "Membership" : "Contributions"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex gap-3 items-center">
                     <button
-                      onClick={() => {
-                        try { setTransactions(JSON.parse(localStorage.getItem("nasmed_transactions") || "[]")); } catch { /* ignore */ }
-                      }}
+                      onClick={() => { try { setTransactions(JSON.parse(localStorage.getItem("nasmed_transactions") || "[]")); } catch { /* ignore */ } }}
                       className="text-[12px] text-nasmed-mid-blue border border-nasmed-mid-blue/30 py-1 px-3 rounded cursor-pointer bg-transparent hover:bg-nasmed-mid-blue/5"
                     >↻ Refresh</button>
-                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[200px] focus:border-nasmed-mid-blue" placeholder="Search..." />
+                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[180px] focus:border-nasmed-mid-blue" placeholder="Search..." />
                   </div>
                 </div>
-                {transactions.length === 0 ? (
-                  <div className="text-center py-12 text-nasmed-text-muted text-[13px]">No transactions yet. Payments from membership registrations will appear here.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead><tr>{["Reference", "Member", "Tier", "Amount", "Currency", "Method", "Status", "Date"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
-                      <tbody>
-                        {transactions
-                          .filter(t => !search || ["member","email","tier","ref"].some(k => String(t[k]||"").toLowerCase().includes(search.toLowerCase())))
-                          .map((t, i) => (
-                          <tr key={i} className="hover:bg-nasmed-off-white">
-                            <td className="py-3 px-3 text-[11px] font-mono">{String(t.ref || "—")}</td>
-                            <td className="py-3 px-3 text-[13px] font-semibold">{String(t.member || "—")}</td>
-                            <td className="py-3 px-3 text-[13px]">{String(t.tier || "—")}</td>
-                            <td className="py-3 px-3 text-[13px] font-bold">{String(t.amount || "—")}</td>
-                            <td className="py-3 px-3 text-[13px]">{String(t.currency || "NGN")}</td>
-                            <td className="py-3 px-3 text-[13px]">
-                              <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${t.method === "Paystack" ? "bg-[#0BA4DB]/10 text-[#0993c5]" : "bg-amber-500/10 text-amber-700"}`}>
-                                {String(t.method || "—")}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3">
-                              {statusBadge(t.status === "confirmed" ? "approved" : t.status === "awaiting_confirmation" ? "pending" : String(t.status || "pending"))}
-                            </td>
-                            <td className="py-3 px-3 text-[13px]">{String(t.date || "—")}</td>
+
+                {(() => {
+                  const filtered = transactions
+                    .filter(t => txnTypeFilter === "all" || t.type === txnTypeFilter)
+                    .filter(t => !search || ["member","email","tier","ref","description"].some(k => String(t[k]||"").toLowerCase().includes(search.toLowerCase())));
+                  return filtered.length === 0 ? (
+                    <div className="text-center py-12 text-nasmed-text-muted text-[13px]">No transactions found.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr>
+                            {["Reference", "Member", "Category", "Amount", "Method", "Description", "Receipt", "Status", "Date", "Action"].map(h => (
+                              <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light whitespace-nowrap">{h}</th>
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {filtered.map((t, i) => (
+                            <tr key={i} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/40 last:border-0">
+                              <td className="py-3 px-3 text-[11px] font-mono text-nasmed-text-muted">{String(t.ref || "—")}</td>
+                              <td className="py-3 px-3">
+                                <div className="text-[13px] font-semibold text-nasmed-navy">{String(t.member || "—")}</div>
+                                <div className="text-[11px] text-nasmed-text-muted">{String(t.email || "")}</div>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className={`py-0.5 px-2 rounded-full text-[10px] font-bold ${t.type === "contribution" ? "bg-purple-500/10 text-purple-700" : "bg-nasmed-mid-blue/10 text-nasmed-mid-blue"}`}>
+                                  {t.type === "contribution" ? "Contribution" : "Membership"}
+                                </span>
+                                <div className="text-[12px] text-nasmed-text-muted mt-0.5">{String(t.tier || "—")}</div>
+                              </td>
+                              <td className="py-3 px-3 text-[13px] font-bold text-nasmed-navy whitespace-nowrap">{String(t.amount || "—")} <span className="text-[11px] font-normal text-nasmed-text-muted">{String(t.currency || "NGN")}</span></td>
+                              <td className="py-3 px-3">
+                                <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${t.method === "Paystack" ? "bg-[#0BA4DB]/10 text-[#0993c5]" : "bg-amber-500/10 text-amber-700"}`}>
+                                  {String(t.method || "—")}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted max-w-[140px] truncate" title={String(t.description || "")}>
+                                {String(t.description || "—")}
+                              </td>
+                              <td className="py-3 px-3">
+                                {t.receiptUrl ? (
+                                  <a href={String(t.receiptUrl)} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-nasmed-mid-blue hover:underline whitespace-nowrap">
+                                    {String(t.receiptName || "receipt").endsWith(".pdf") ? "📋 PDF" : "🖼️ Image"}
+                                  </a>
+                                ) : (
+                                  <span className="text-[11px] text-nasmed-text-muted">None</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3">
+                                {statusBadge(t.status === "confirmed" ? "approved" : t.status === "awaiting_confirmation" ? "pending" : String(t.status || "pending"))}
+                              </td>
+                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted whitespace-nowrap">{String(t.date || "—")}</td>
+                              <td className="py-3 px-3">
+                                {t.status === "awaiting_confirmation" ? (
+                                  <button
+                                    onClick={() => handleConfirmTransaction(String(t.ref))}
+                                    className="bg-nasmed-green text-white border-none py-1.5 px-3 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-nasmed-green-light whitespace-nowrap"
+                                  >
+                                    ✓ Confirm
+                                  </button>
+                                ) : (
+                                  <span className="text-[11px] text-nasmed-text-muted">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           )}

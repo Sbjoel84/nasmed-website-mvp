@@ -39,6 +39,17 @@ export default function MemberLoginPage() {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loadingPubs, setLoadingPubs] = useState(false);
 
+  // Redirect once the user is confirmed logged in (and doesn't need to change password)
+  useEffect(() => {
+    if (user && !authLoading && !mustChangePassword) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/member-dashboard");
+      }
+    }
+  }, [user, authLoading, mustChangePassword, isAdmin]);
+
   useEffect(() => {
     if (user && !authLoading && !mustChangePassword) {
       loadPublications();
