@@ -7,9 +7,12 @@ export interface Publication {
   type: 'Guidelines' | 'Journal' | 'Protocol' | 'Research' | 'Newsletter' | 'Report';
   description: string;
   file_url?: string;
+  file_name?: string;
   downloads: number;
   status: 'draft' | 'published';
   author_id?: string;
+  access?: string;
+  price?: string;
 }
 
 export const publicationService = {
@@ -50,7 +53,7 @@ export const publicationService = {
 
     if (file) {
       const fileName = `${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('publications')
         .upload(fileName, file);
 

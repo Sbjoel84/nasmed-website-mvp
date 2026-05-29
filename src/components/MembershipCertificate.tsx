@@ -1,9 +1,12 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
 import nasmedLogo from "@/assets/nasmed-logo.png";
+import signaturePresident from "@/assets/signature-president.jpg";
+import signatureSecretary from "@/assets/signature-secretary.jpg";
+import nasmedSeal from "@/assets/nasmed-seal.jpg";
 
 interface Props {
   memberName: string;
@@ -33,57 +36,6 @@ function LotusWatermark() {
   );
 }
 
-function PresidentSignature() {
-  return (
-    <svg width="150" height="42" viewBox="0 0 150 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
-      <path d="M 8,34 C 14,10 28,6 34,20 C 38,28 40,14 48,10 C 55,7 57,22 62,26 C 66,30 68,16 76,13 C 82,11 84,24 90,22 C 96,20 96,10 104,13 C 110,16 108,28 114,26 C 120,24 120,15 128,17 C 134,19 133,30 140,28" stroke="#1a3a6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M 6,37 Q 50,41 100,39 Q 125,38 144,36" stroke="#1a3a6e" strokeWidth="0.9" strokeLinecap="round" opacity="0.55"/>
-    </svg>
-  );
-}
-
-function SecretarySignature() {
-  return (
-    <svg width="150" height="42" viewBox="0 0 150 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
-      <path d="M 6,30 C 12,8 24,6 28,18 C 31,26 33,12 42,10 C 50,8 50,22 56,20 C 62,18 60,8 68,10 C 75,12 74,26 80,24 C 86,22 88,12 96,14 C 102,16 100,28 106,26 C 112,24 114,14 122,16 C 128,18 126,30 132,28 C 137,26 138,18 144,20" stroke="#1a3a6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M 4,35 C 6,32 10,38 20,36 Q 70,40 144,36" stroke="#1a3a6e" strokeWidth="0.9" strokeLinecap="round" opacity="0.55"/>
-    </svg>
-  );
-}
-
-// FIMS-style badge (CSS recreation — original not available as asset)
-function FimsBadge() {
-  return (
-    <div style={{
-      width: "80px", height: "80px", border: "3px solid #1a3a6e", borderRadius: "6px",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      background: "white", gap: "2px",
-    }}>
-      <div style={{ display: "flex", gap: "2px", marginBottom: "2px" }}>
-        {["#0081C8","#FCB131","#000","#00A651","#EE334E"].map((c, i) => (
-          <div key={i} style={{ width: "12px", height: "12px", borderRadius: "50%", border: `2.5px solid ${c}`, background: "transparent" }} />
-        ))}
-      </div>
-      <div style={{ fontSize: "11px", fontWeight: "900", color: "#1a3a6e", letterSpacing: "2px", fontFamily: "Arial, sans-serif" }}>FIMS</div>
-    </div>
-  );
-}
-
-// NASMED circular seal
-function NasmedSeal() {
-  return (
-    <div style={{
-      width: "84px", height: "84px", borderRadius: "50%",
-      border: "3px solid #b8860b", display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", background: "white",
-      boxShadow: "0 0 0 1px #b8860b inset",
-    }}>
-      <img src={nasmedLogo} style={{ width: "42px", height: "42px", objectFit: "contain" }} alt="NASMED" />
-      <div style={{ fontSize: "8px", fontWeight: "bold", color: "#1a3a6e", letterSpacing: "1px", marginTop: "2px" }}>EST. 1994</div>
-    </div>
-  );
-}
-
 export function CertificateFrame({ memberName, certNumber, date, membershipType }: Omit<Props, "email">) {
   return (
     <div
@@ -109,33 +61,32 @@ export function CertificateFrame({ memberName, certNumber, date, membershipType 
       {/* All content above watermark */}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
 
-        {/* Header row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-          <img src={nasmedLogo} style={{ height: "72px", width: "72px", objectFit: "contain" }} alt="NASMED" />
+        {/* Header — NASMED logo centered at top */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "6px", gap: "4px" }}>
+          <img src={nasmedLogo} style={{ height: "70px", width: "70px", objectFit: "contain" }} alt="NASMED" />
           <h1 style={{
             color: "#b8860b", fontSize: "26px", letterSpacing: "5px",
             fontFamily: "'Times New Roman', Times, serif", fontWeight: "bold",
-            textAlign: "center", flex: 1, margin: "0 16px", lineHeight: 1.2,
+            textAlign: "center", margin: 0, lineHeight: 1.2,
           }}>
             MEMBERSHIP CERTIFICATE
           </h1>
-          <FimsBadge />
         </div>
 
         {/* Cert number — right-aligned */}
-        <div style={{ textAlign: "right", fontSize: "12px", color: "#555", marginBottom: "10px" }}>
+        <div style={{ textAlign: "right", fontSize: "12px", color: "#555", marginBottom: "8px" }}>
           Cert No. {certNumber}
         </div>
 
         {/* THIS CERTIFIES THAT */}
-        <div style={{ textAlign: "center", letterSpacing: "4px", color: "#666", fontSize: "12px", marginBottom: "18px" }}>
+        <div style={{ textAlign: "center", letterSpacing: "4px", color: "#666", fontSize: "12px", marginBottom: "16px" }}>
           THIS CERTIFIES THAT
         </div>
 
         {/* Member name */}
         <div style={{
           textAlign: "center", fontSize: "30px", color: "#1a3a6e",
-          fontFamily: "'Times New Roman', Times, serif", marginBottom: "14px",
+          fontFamily: "'Times New Roman', Times, serif", marginBottom: "12px",
           fontStyle: "italic", letterSpacing: "1px",
         }}>
           {memberName || "Member Name"}
@@ -153,29 +104,53 @@ export function CertificateFrame({ memberName, certNumber, date, membershipType 
           {date}
         </div>
 
+        {/* Membership type tag */}
+        {membershipType && (
+          <div style={{ textAlign: "center", fontSize: "11px", color: "#b8860b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "8px" }}>
+            {membershipType}
+          </div>
+        )}
+
         {/* Footer: signatures + seal */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "12px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: "4px" }}>
+
           {/* President */}
-          <div style={{ textAlign: "center", width: "180px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
-              <PresidentSignature />
+          <div style={{ textAlign: "center", width: "190px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "2px" }}>
+              <img
+                src={signaturePresident}
+                alt="President signature"
+                style={{ height: "44px", maxWidth: "170px", objectFit: "contain", objectPosition: "bottom" }}
+              />
             </div>
             <div style={{ borderBottom: "1.5px solid #333", marginBottom: "5px" }} />
             <span style={{ fontSize: "12px", fontWeight: "bold", color: "#1a3a6e", display: "block" }}>Dr. Olajide Joseph Adebola</span>
             <span style={{ fontSize: "11px", color: "#666" }}>President, NASMED</span>
           </div>
 
-          <NasmedSeal />
+          {/* NASMED Seal */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: "4px" }}>
+            <img
+              src={nasmedSeal}
+              alt="NASMED Seal"
+              style={{ width: "88px", height: "88px", objectFit: "contain" }}
+            />
+          </div>
 
           {/* Secretary-General */}
-          <div style={{ textAlign: "center", width: "180px" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "0px" }}>
-              <SecretarySignature />
+          <div style={{ textAlign: "center", width: "190px" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "2px" }}>
+              <img
+                src={signatureSecretary}
+                alt="Secretary-General signature"
+                style={{ height: "44px", maxWidth: "170px", objectFit: "contain", objectPosition: "bottom" }}
+              />
             </div>
             <div style={{ borderBottom: "1.5px solid #333", marginBottom: "5px" }} />
             <span style={{ fontSize: "12px", fontWeight: "bold", color: "#1a3a6e", display: "block" }}>Secretary-General</span>
             <span style={{ fontSize: "11px", color: "#666" }}>Secretary-General, NASMED</span>
           </div>
+
         </div>
       </div>
     </div>
@@ -255,6 +230,7 @@ export default function MembershipCertificate({ memberName, certNumber, date, me
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
         <button
+          type="button"
           onClick={handleDownload}
           disabled={downloading}
           className="flex-1 flex items-center justify-center gap-2 bg-nasmed-navy text-white border-none py-3.5 px-6 rounded-lg text-[15px] font-semibold cursor-pointer hover:opacity-90 transition-all disabled:opacity-50"
@@ -262,6 +238,7 @@ export default function MembershipCertificate({ memberName, certNumber, date, me
           {downloading ? "Generating…" : "⬇ Download Certificate (PDF)"}
         </button>
         <button
+          type="button"
           onClick={handleSendEmail}
           disabled={sending}
           className="flex-1 flex items-center justify-center gap-2 bg-nasmed-green text-white border-none py-3.5 px-6 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50"

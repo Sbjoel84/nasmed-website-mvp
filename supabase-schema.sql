@@ -24,6 +24,11 @@ DROP POLICY IF EXISTS "allow_update_own_profile" ON public.profiles;
 CREATE POLICY "allow_update_own_profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
+-- Policy: Allow service-role / authenticated inserts (needed when authService.signUp inserts directly)
+DROP POLICY IF EXISTS "allow_insert_profiles" ON public.profiles;
+CREATE POLICY "allow_insert_profiles" ON public.profiles
+  FOR INSERT WITH CHECK (true);
+
 -- Create tables (if not exists)
 CREATE TABLE IF NOT EXISTS public.applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

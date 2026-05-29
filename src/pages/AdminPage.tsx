@@ -1,84 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen } from "@/components/ui/loading-spinner";
 import logo from "@/assets/nasmed-logo.png";
 import authService from "@/lib/authService";
+import supabase from "@/lib/supabaseClient";
+import html2canvas from "html2canvas";
+import emailjs from "@emailjs/browser";
+import { CertificateFrame } from "@/components/MembershipCertificate";
+import applicationService, { Application } from "@/services/applicationService";
+import userService from "@/services/userService";
+import publicationService from "@/services/publicationService";
+import transactionService from "@/services/transactionService";
 
-const DEMO_APPS = [
-  {
-    id: "APP-001", name: "Dr. Chike Okafor", email: "chike.okafor@gmail.com", prof: "Sports Physician",
-    tier: "Professional Member", state: "Lagos", date: "28/06/2024", status: "pending",
-    phone: "+234 803 456 7890", altEmail: "—", qualifications: "MBBS, MSc Sports Medicine",
-    workplace: "Lagos University Teaching Hospital",
-    referee1: { name: "Prof. O. Makanju", email: "makanju@unilag.edu.ng", mobile: "+234 802 111 2222" },
-    referee2: { name: "Dr. B.O. Onabowale", email: "onabowale@nasmed.ng", mobile: "+234 803 333 4444" },
-    statement: "I am a dedicated sports medicine physician with over eight years of clinical experience in managing musculoskeletal injuries, sports-related concussions, and performance optimisation for elite and recreational athletes across Nigeria.",
-    payment: "Paid", submitted: "28 Jun 2024",
-  },
-  {
-    id: "APP-002", name: "Mrs. Abiodun Salami", email: "abiodun.salami@email.com", prof: "Physiotherapist",
-    tier: "Associate Member", state: "Lagos", date: "20/06/2024", status: "pending",
-    phone: "+234 806 222 3344", altEmail: "salami_abio@yahoo.com", qualifications: "BSc Physiotherapy",
-    workplace: "National Orthopaedic Hospital, Lagos",
-    referee1: { name: "Dr. I. Taiwo", email: "i.taiwo@luth.edu.ng", mobile: "+234 801 555 6677" },
-    referee2: { name: "Dr. S. Eze", email: "s.eze@nasmed.ng", mobile: "+234 805 888 9900" },
-    statement: "As a physiotherapist specialising in sports rehabilitation, I have worked extensively with Nigerian football clubs.",
-    payment: "Paid", submitted: "20 Jun 2024",
-  },
-  {
-    id: "APP-003", name: "Dr. Ezekiel Adeyemi", email: "ezekiel@email.com", prof: "Exercise Physiologist",
-    tier: "Fellow (FNASMED)", state: "Enugu", date: "10/06/2024", status: "approved",
-    phone: "+234 803 777 8888", altEmail: "—", qualifications: "MBBS, PhD Exercise Physiology",
-    workplace: "University of Nigeria Teaching Hospital",
-    referee1: { name: "Prof. C. Obiora", email: "c.obiora@unth.edu.ng", mobile: "+234 803 100 2000" },
-    referee2: { name: "Dr. A. Nwosu", email: "a.nwosu@nasmed.ng", mobile: "+234 807 300 4000" },
-    statement: "With a PhD in Exercise Physiology and over 15 years of research and clinical practice.",
-    payment: "Paid", submitted: "10 Jun 2024",
-  },
-  {
-    id: "APP-004", name: "Dr. Fatima Garba", email: "fatima@email.com", prof: "Sports Surgeon",
-    tier: "Professional Member", state: "Kano", date: "08/06/2024", status: "approved",
-    phone: "+234 811 444 5555", altEmail: "fatima.garba@kth.ng", qualifications: "MBBS, FWACS (Surgery)",
-    workplace: "Kano Teaching Hospital",
-    referee1: { name: "Prof. M. Dankama", email: "m.dankama@kth.edu.ng", mobile: "+234 811 600 7000" },
-    referee2: { name: "Dr. Y. Aliyu", email: "y.aliyu@nasmed.ng", mobile: "+234 812 800 9000" },
-    statement: "As a Fellow of the West African College of Surgeons with a subspecialty in orthopaedic sports surgery.",
-    payment: "Paid", submitted: "08 Jun 2024",
-  },
-  {
-    id: "APP-005", name: "Mr. Seun Badmos", email: "seun@email.com", prof: "Nutritionist",
-    tier: "Associate Member", state: "Rivers", date: "05/06/2024", status: "rejected",
-    phone: "+234 704 123 4567", altEmail: "—", qualifications: "BSc Nutrition and Dietetics",
-    workplace: "Port Harcourt Sports Commission",
-    referee1: { name: "Dr. T. Amadi", email: "t.amadi@uniph.edu.ng", mobile: "+234 703 111 2222" },
-    referee2: { name: "Dr. C. Nwachukwu", email: "c.nwachukwu@nasmed.ng", mobile: "+234 701 333 4444" },
-    statement: "I am a sports nutritionist working with the Rivers State athletics team.",
-    payment: "Paid", submitted: "05 Jun 2024",
-  },
-  {
-    id: "APP-006", name: "Dr. Halima Musa", email: "halima@email.com", prof: "Sports Psychologist",
-    tier: "Professional Member", state: "Kaduna", date: "01/06/2024", status: "pending",
-    phone: "+234 809 888 7766", altEmail: "halima.musa@ahms.edu.ng", qualifications: "MBBS, MSc Sports Psychology",
-    workplace: "Ahmadu Bello University Medical Centre",
-    referee1: { name: "Prof. D. Lawal", email: "d.lawal@abu.edu.ng", mobile: "+234 808 200 3000" },
-    referee2: { name: "Dr. K. Abubakar", email: "k.abubakar@nasmed.ng", mobile: "+234 809 400 5000" },
-    statement: "My work at ABU Medical Centre focuses on the psychological readiness and mental resilience of elite athletes.",
-    payment: "Paid", submitted: "01 Jun 2024",
-  },
-  {
-    id: "APP-007", name: "Dr. Tunde Olawale", email: "tunde@email.com", prof: "Physiotherapist",
-    tier: "Associate Member", state: "Oyo", date: "28/05/2024", status: "pending",
-    phone: "+234 812 555 6677", altEmail: "—", qualifications: "BSc, MSc Physiotherapy",
-    workplace: "University College Hospital, Ibadan",
-    referee1: { name: "Dr. O. Adeleke", email: "o.adeleke@uch.edu.ng", mobile: "+234 811 700 8000" },
-    referee2: { name: "Dr. F. Oguntunde", email: "f.oguntunde@nasmed.ng", mobile: "+234 815 900 1000" },
-    statement: "Working in one of Nigeria's foremost teaching hospitals, I have developed a strong foundation in sports rehabilitation.",
-    payment: "Pending", submitted: "28 May 2024",
-  },
-];
-
+// ── DEMO_MEMBERS_INIT kept ONLY for the "Initialize All Accounts" one-time seeding tool ──
 const DEMO_MEMBERS_INIT = [
   { id: "NASMED/24/0001", name: "Prof. Olatunde Oyebisi Makanju", username: "olatunde.makanju", email: "olatunde.makanju@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Immediate Past President", mustChange: true },
   { id: "NASMED/24/0002", name: "Dr. Obinnaya Francis Udugwu", username: "obinnaya.udugwu", email: "obinnaya.udugwu@uniport.edu.ng", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Rivers", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
@@ -124,13 +60,113 @@ const DEMO_MEMBERS_INIT = [
   { id: "NASMED/24/0042", name: "Mrs. Salamatu Suleiman Kpautagi", username: "salamatukpautagi", email: "salamatukpautagi@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Plateau", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
 ];
 
-const DEMO_PUBLICATIONS = [
-  { id: "PUB-001", title: "NASMED Clinical Guidelines for Sports Injury Management", type: "Guidelines", date: "Dec 2024", downloads: 234, status: "published", access: "subscribed", price: "", fileName: "" },
-  { id: "PUB-002", title: "Quarterly Sports Medicine Journal - Q4 2024", type: "Journal", date: "Oct 2024", downloads: 567, status: "published", access: "paid", price: "₦2,500", fileName: "" },
-  { id: "PUB-003", title: "Concussion Management Protocol for Nigerian Athletes", type: "Protocol", date: "Sep 2024", downloads: 892, status: "published", access: "free", price: "", fileName: "" },
-  { id: "PUB-004", title: "Exercise Prescription for Chronic Disease Management", type: "Research", date: "Aug 2024", downloads: 445, status: "published", access: "subscribed", price: "", fileName: "" },
-  { id: "PUB-005", title: "NASMED Newsletter - January 2025", type: "Newsletter", date: "Jan 2025", downloads: 123, status: "draft", access: "free", price: "", fileName: "" },
-];
+// ── Display types matching existing JSX field references ──
+interface DisplayApp {
+  id: string; name: string; email: string; prof: string; tier: string;
+  state: string; date: string; status: string; phone: string; altEmail: string;
+  qualifications: string; workplace: string;
+  referee1: { name: string; email: string; mobile: string };
+  referee2: { name: string; email: string; mobile: string };
+  statement: string; payment: string; submitted: string;
+  receiptUrl?: string; receiptName?: string;
+}
+
+interface DisplayMember {
+  id: string;   // member_number (for display)
+  _dbId: string; // Supabase UUID (for DB ops)
+  name: string; username: string; email: string; password: string;
+  prof: string; tier: string; state: string; joined: string;
+  status: string; position: string; mustChange: boolean;
+}
+
+interface DisplayPub {
+  id: string; title: string; type: string; date: string;
+  downloads: number; status: string; access: string; price: string; fileName: string;
+}
+
+interface DisplayTxn {
+  id: string; ref: string; member: string; email: string; tier: string;
+  amount: string; currency: string; method: string; status: string;
+  description: string; date: string; type: string;
+  receiptUrl?: string; receiptName?: string;
+}
+
+function toDisplayApp(a: Application): DisplayApp {
+  return {
+    id: a.id,
+    name: a.full_name,
+    email: a.email,
+    prof: a.profession || "",
+    tier: a.membership_type || "",
+    state: a.state || "",
+    date: new Date(a.created_at).toLocaleDateString("en-GB"),
+    status: a.status,
+    phone: a.phone || "",
+    altEmail: "",
+    qualifications: a.qualifications || "",
+    workplace: a.workplace || "",
+    referee1: { name: a.referee1_name || "", email: a.referee1_email || "", mobile: a.referee1_phone || "" },
+    referee2: { name: a.referee2_name || "", email: a.referee2_email || "", mobile: a.referee2_phone || "" },
+    statement: a.statement || "",
+    payment: a.payment_status === "paid" ? "Paid" : "Pending",
+    submitted: new Date(a.created_at).toLocaleDateString("en-GB"),
+    receiptUrl: (a as unknown as Record<string, string>).payment_receipt_url || undefined,
+  };
+}
+
+function toDisplayMember(p: ReturnType<typeof Object.assign>): DisplayMember {
+  return {
+    id: p.member_number || p.id,
+    _dbId: p.id,
+    name: p.full_name || "",
+    username: p.username || "",
+    email: p.email || "",
+    password: "nasmed2024!",
+    prof: p.profession || p.membership_type || "",
+    tier: p.membership_type || "",
+    state: p.state || "",
+    joined: p.created_at ? new Date(p.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "",
+    status: p.status || "active",
+    position: p.position || "",
+    mustChange: p.must_change_password ?? false,
+  };
+}
+
+function toDisplayPub(p: Record<string, unknown>): DisplayPub {
+  const createdAt = p.created_at as string | undefined;
+  const fileUrl = p.file_url as string | undefined;
+  return {
+    id: p.id as string,
+    title: (p.title as string) || "",
+    type: (p.type as string) || "",
+    date: createdAt ? new Date(createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "",
+    downloads: (p.downloads as number) || 0,
+    status: (p.status as string) || "draft",
+    access: (p.access as string) || "free",
+    price: (p.price as string) || "",
+    fileName: (p.file_name as string) || (fileUrl ? fileUrl.split("/").pop() || "" : ""),
+  };
+}
+
+function toDisplayTxn(t: Record<string, unknown>): DisplayTxn {
+  const createdAt = t.created_at as string | undefined;
+  return {
+    id: t.id as string,
+    ref: (t.payment_ref as string) || "",
+    member: (t.member_name as string) || "",
+    email: (t.email as string) || "",
+    tier: (t.membership_type as string) || "",
+    amount: (t.amount as string) || "",
+    currency: (t.currency as string) || "NGN",
+    method: (t.payment_method as string) || "",
+    status: (t.status as string) || "pending",
+    description: (t.description as string) || "",
+    date: createdAt ? new Date(createdAt).toLocaleDateString("en-GB") : "",
+    type: (t.type as string) || "membership",
+    receiptUrl: (t.receipt_url as string) || undefined,
+    receiptName: (t.receipt_name as string) || undefined,
+  };
+}
 
 const TIER_AMOUNTS: Record<string, string> = {
   "Fellow (FNASMED)": "₦250,000",
@@ -147,8 +183,6 @@ const nigerianStates = [
   "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-type App = typeof DEMO_APPS[0];
-type Publication = typeof DEMO_PUBLICATIONS[0];
 type Subscription = { id: string; member: string; tier: string; start: string; expiry: string; status: string; amount: string };
 
 const LOCAL_ADMIN_PASSWORD = "nasmed@admin2024";
@@ -157,25 +191,15 @@ export default function AdminPage() {
   const { user, loading, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  // Local admin auth fallback (used when Supabase auth is unavailable)
   const [localAuth, setLocalAuth] = useState(() => sessionStorage.getItem("nasmed_admin") === "1");
   const [localPw, setLocalPw] = useState("");
   const [localErr, setLocalErr] = useState("");
 
-  // All hooks must be declared before any conditional returns (React rules of hooks)
   const [activeSection, setActiveSection] = useState("dashboard");
-  const [applications, setApplications] = useState<typeof DEMO_APPS[0][]>(() => {
-    try {
-      const stored: typeof DEMO_APPS[0][] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
-      const storedIds = new Set(stored.map(a => a.id));
-      const demo = DEMO_APPS.filter(a => !storedIds.has(a.id));
-      return [...stored, ...demo];
-    } catch {
-      return [...DEMO_APPS];
-    }
-  });
-  const [members, setMembers] = useState(DEMO_MEMBERS_INIT);
-  const [publications, setPublications] = useState(DEMO_PUBLICATIONS);
+  const [applications, setApplications] = useState<DisplayApp[]>([]);
+  const [members, setMembers] = useState<DisplayMember[]>([]);
+  const [publications, setPublications] = useState<DisplayPub[]>([]);
+  const [transactions, setTransactions] = useState<DisplayTxn[]>([]);
   const [search, setSearch] = useState("");
 
   const subscriptions: Subscription[] = members.map(m => {
@@ -191,7 +215,8 @@ export default function AdminPage() {
       amount: TIER_AMOUNTS[m.tier] ?? "₦25,000",
     };
   });
-  const [viewApp, setViewApp] = useState<App | null>(null);
+
+  const [viewApp, setViewApp] = useState<DisplayApp | null>(null);
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
   const [afEmail, setAfEmail] = useState("");
@@ -205,10 +230,7 @@ export default function AdminPage() {
   const [pubAccess, setPubAccess] = useState("free");
   const [pubPrice, setPubPrice] = useState("");
   const [pubFile, setPubFile] = useState<File | null>(null);
-  const [editMember, setEditMember] = useState<typeof DEMO_MEMBERS_INIT[0] | null>(null);
-  const [transactions, setTransactions] = useState<Record<string, unknown>[]>(() => {
-    try { return JSON.parse(localStorage.getItem("nasmed_transactions") || "[]"); } catch { return []; }
-  });
+  const [editMember, setEditMember] = useState<DisplayMember | null>(null);
   const [txnTypeFilter, setTxnTypeFilter] = useState<"all" | "membership" | "contribution">("all");
 
   const canAccess = localAuth || (!loading && isAdmin);
@@ -216,6 +238,76 @@ export default function AdminPage() {
   const [initProgress, setInitProgress] = useState<{ done: number; total: number; running: boolean; log: string[] }>({ done: 0, total: 0, running: false, log: [] });
   const [approvedCreds, setApprovedCreds] = useState<{ name: string; username: string; nasmedEmail: string; memberNumber: string; password: string } | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [certToSend, setCertToSend] = useState<{ name: string; certNumber: string; date: string; tier: string; email: string } | null>(null);
+
+  // Certificate email effect
+  useEffect(() => {
+    if (!certToSend) return;
+    const timer = setTimeout(async () => {
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
+      if (!serviceId || !templateId || !publicKey) {
+        toast.info("EmailJS not configured — certificate not emailed.");
+        setCertToSend(null);
+        return;
+      }
+      try {
+        const el = document.getElementById("admin-cert-hidden");
+        if (!el) throw new Error("cert element missing");
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#fff" });
+        const imageData = canvas.toDataURL("image/jpeg", 0.9);
+        await emailjs.send(serviceId, templateId, {
+          to_email: certToSend.email,
+          member_name: certToSend.name,
+          cert_number: certToSend.certNumber,
+          membership_type: certToSend.tier,
+          issue_date: certToSend.date,
+          certificate_image: imageData,
+        }, publicKey);
+        toast.success(`Membership certificate emailed to ${certToSend.email}`);
+      } catch {
+        toast.error("Could not send certificate email — check EmailJS config.");
+      } finally {
+        setCertToSend(null);
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [certToSend]);
+
+  // Real-time data loading
+  useEffect(() => {
+    if (!canAccess) return;
+
+    const loadAll = () => {
+      applicationService.getAll().then(data => setApplications(data.map(toDisplayApp))).catch(() => {});
+      userService.getAll().then(data => setMembers(data.filter(p => p.role === "member").map(toDisplayMember))).catch(() => {});
+      publicationService.getAll().then(data => setPublications(data.map(d => toDisplayPub(d as unknown as Record<string, unknown>)))).catch(() => {});
+      transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
+    };
+
+    loadAll();
+
+    const appSub = applicationService.subscribeToChanges(() => {
+      applicationService.getAll().then(data => setApplications(data.map(toDisplayApp))).catch(() => {});
+    });
+    const memberSub = userService.subscribeToChanges(() => {
+      userService.getAll().then(data => setMembers(data.filter(p => p.role === "member").map(toDisplayMember))).catch(() => {});
+    });
+    const pubSub = publicationService.subscribeToChanges(() => {
+      publicationService.getAll().then(data => setPublications(data.map(d => toDisplayPub(d as unknown as Record<string, unknown>)))).catch(() => {});
+    });
+    const txnSub = transactionService.subscribeToChanges(() => {
+      transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
+    });
+
+    return () => {
+      supabase.removeChannel(appSub);
+      supabase.removeChannel(memberSub);
+      supabase.removeChannel(pubSub);
+      supabase.removeChannel(txnSub);
+    };
+  }, [canAccess]);
 
   const initializeMemberAccounts = async () => {
     if (!confirm(`This will create Supabase auth accounts for all ${DEMO_MEMBERS_INIT.length} members. Existing accounts will be skipped. Continue?`)) return;
@@ -236,7 +328,6 @@ export default function AdminPage() {
     toast.success("Member account initialization complete!");
   };
 
-  // Show local login form if not authenticated via Supabase and not locally authenticated
   if (!canAccess && !loading) {
     const handleLocalLogin = (e: React.FormEvent) => {
       e.preventDefault();
@@ -292,7 +383,6 @@ export default function AdminPage() {
             isAdmin: {isAdmin ? 'Yes' : 'No'}<br/>
             User ID: {user?.id}
           </div>
-
           <button
             onClick={() => signOut()}
             className="bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
@@ -319,8 +409,9 @@ export default function AdminPage() {
         const nasmedEmail = `${username}@nasmed.com`;
         await authService.activateMember(app.email, username, memberNumber, "Member", app.tier);
         setApprovedCreds({ name: app.name, username, nasmedEmail, memberNumber, password: "nasmed2024!" });
-        const newMember = {
+        const newMember: DisplayMember = {
           id: memberNumber,
+          _dbId: "",
           name: app.name,
           username,
           email: app.email,
@@ -335,83 +426,119 @@ export default function AdminPage() {
         };
         setMembers(prev => prev.some(m => m.email === app.email) ? prev : [newMember, ...prev]);
         setApprovingId(null);
+        const certDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase();
+        setCertToSend({ name: app.name, certNumber: memberNumber, date: certDate, tier: app.tier, email: app.email });
+        toast.success(`${app.name} approved! Sending membership certificate to ${app.email}…`);
       }
     }
 
     setApplications(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
     if (viewApp?.id === id) setViewApp(prev => prev ? { ...prev, status: newStatus } : null);
-    try {
-      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
-      const updated = stored.map(a => a.id === id ? { ...a, status: newStatus } : a);
-      localStorage.setItem("nasmed_applications", JSON.stringify(updated));
-    } catch { /* ignore */ }
+    applicationService.updateStatus(id, newStatus as "approved" | "rejected").catch(() => {});
     if (action !== "approve") toast.success("Application rejected & member notified.");
   };
 
-  const addMember = () => {
+  const addMember = async () => {
     if (!afFname || !afLname) { toast.error("Please fill in required fields."); return; }
-    const m = {
-      id: "NAS-" + (members.length + 1).toString().padStart(4, "0"),
-      name: "Dr. " + afFname + " " + afLname,
-      username: (afFname + "." + afLname).toLowerCase(),
-      password: "nasmed2024",
-      prof: afProf || "Professional",
-      tier: afTier, state: afState,
-      joined: new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
-      status: "active", position: "", mustChange: true,
-    };
-    setMembers(prev => [m, ...prev]);
-    toast.success(`Member ${m.name} registered!`);
-    setAfFname(""); setAfLname(""); setAfEmail(""); setAfPhone(""); setAfProf("");
-  };
-
-  const handleConfirmTransaction = (ref: string) => {
+    const defaultPassword = "nasmed2024!";
+    const name = `${afFname} ${afLname}`;
+    const username = (afFname + "." + afLname).toLowerCase().replace(/\s+/g, "");
     try {
-      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
-      const updated = txns.map(t => t.ref === ref ? { ...t, status: "confirmed" } : t);
-      localStorage.setItem("nasmed_transactions", JSON.stringify(updated));
-      setTransactions(updated);
-      toast.success("Payment confirmed successfully!");
-    } catch { /* ignore */ }
-  };
-
-  const deleteMember = (id: string) => {
-    if (confirm("Are you sure you want to delete this member?")) {
-      setMembers(prev => prev.filter(m => m.id !== id));
-      toast.success("Member deleted successfully");
+      const { error } = await authService.signUpMember(
+        afEmail, defaultPassword, name, afTier, username, "", "",
+      );
+      if (error && !error.toLowerCase().includes("already registered")) {
+        toast.error(`Failed to create member account: ${error}`);
+        return;
+      }
+      toast.success(`Member ${name} registered! They can log in with their email and 'nasmed2024!'.`);
+      setAfFname(""); setAfLname(""); setAfEmail(""); setAfPhone(""); setAfProf("");
+    } catch {
+      toast.error("Failed to register member.");
     }
   };
 
-  const saveMember = () => {
-    if (!editMember) return;
-    setMembers(prev => prev.map(m => m.id === editMember.id ? editMember : m));
-    setEditMember(null);
-    toast.success("Member updated successfully");
+  const handleConfirmTransaction = async (txnId: string) => {
+    try {
+      await transactionService.updateStatus(txnId, "confirmed");
+      setTransactions(prev => prev.map(t => t.id === txnId ? { ...t, status: "confirmed" } : t));
+      toast.success("Payment confirmed successfully!");
+    } catch {
+      toast.error("Failed to confirm transaction.");
+    }
   };
 
-  const addPublication = () => {
+  const deleteMember = async (dbId: string) => {
+    if (confirm("Are you sure you want to delete this member?")) {
+      try {
+        await userService.delete(dbId);
+        setMembers(prev => prev.filter(m => m._dbId !== dbId));
+        toast.success("Member deleted successfully");
+      } catch {
+        toast.error("Failed to delete member.");
+      }
+    }
+  };
+
+  const saveMember = async () => {
+    if (!editMember) return;
+    try {
+      if (editMember._dbId) {
+        await userService.update(editMember._dbId, {
+          full_name: editMember.name,
+          profession: editMember.prof,
+          membership_type: editMember.tier,
+          state: editMember.state,
+          position: editMember.position,
+          status: editMember.status as "active" | "inactive" | "suspended",
+        });
+      }
+      setMembers(prev => prev.map(m => m._dbId === editMember._dbId ? editMember : m));
+      setEditMember(null);
+      toast.success("Member updated successfully");
+    } catch {
+      toast.error("Failed to update member.");
+    }
+  };
+
+  const addPublication = async () => {
     if (!pubTitle) { toast.error("Please enter a title."); return; }
     if (pubAccess === "paid" && !pubPrice) { toast.error("Please enter a price for paid publications."); return; }
-    const p: Publication = {
-      id: "PUB-" + (publications.length + 1).toString().padStart(3, "0"),
-      title: pubTitle,
-      type: pubType,
-      date: new Date().toLocaleDateString("en-GB", { month: "short", year: "numeric" }),
-      downloads: 0,
-      status: "published",
-      access: pubAccess,
-      price: pubAccess === "paid" ? pubPrice : "",
-      fileName: pubFile ? pubFile.name : "",
-    };
-    setPublications(prev => [p, ...prev]);
-    toast.success(`Publication "${p.title}" created!`);
-    setPubTitle(""); setPubContent(""); setPubPrice(""); setPubFile(null); setPubAccess("free");
+    try {
+      const pub = await publicationService.create({
+        title: pubTitle,
+        type: pubType as "Guidelines" | "Journal" | "Protocol" | "Research" | "Newsletter" | "Report",
+        description: pubContent,
+        status: "published",
+      }, pubFile || undefined);
+      await publicationService.update(pub.id, {
+        access: pubAccess,
+        price: pubAccess === "paid" ? pubPrice : "",
+        file_name: pubFile?.name || "",
+      } as Parameters<typeof publicationService.update>[1]);
+      const dispPub = toDisplayPub({
+        ...pub,
+        access: pubAccess,
+        price: pubAccess === "paid" ? pubPrice : "",
+        file_name: pubFile?.name || "",
+      } as unknown as Record<string, unknown>);
+      setPublications(prev => [dispPub, ...prev]);
+      toast.success(`Publication "${pubTitle}" created!`);
+      setPubTitle(""); setPubContent(""); setPubPrice(""); setPubFile(null); setPubAccess("free");
+    } catch {
+      toast.error("Failed to create publication.");
+    }
   };
 
-  const deletePublication = (id: string) => {
+  const deletePublication = async (id: string) => {
     if (confirm("Are you sure you want to delete this publication?")) {
-      setPublications(prev => prev.filter(p => p.id !== id));
-      toast.success("Publication deleted");
+      try {
+        await publicationService.delete(id);
+        setPublications(prev => prev.filter(p => p.id !== id));
+        toast.success("Publication deleted");
+      } catch {
+        toast.error("Failed to delete publication.");
+      }
     }
   };
 
@@ -444,10 +571,10 @@ export default function AdminPage() {
     { key: "credentials", icon: "🔑", label: "Credentials" },
   ];
 
-  const filterRows = (rows: any[], keys: string[]) => {
+  const filterRows = (rows: unknown[], keys: string[]) => {
     if (!search) return rows;
     const s = search.toLowerCase();
-    return rows.filter(r => keys.some(k => String(r[k] || "").toLowerCase().includes(s)));
+    return rows.filter(r => keys.some(k => String((r as Record<string, unknown>)[k] || "").toLowerCase().includes(s)));
   };
 
   const field = (label: string, value: string) => (
@@ -528,26 +655,25 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Recent Activity */}
+              {/* Recent Activity — from live applications */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <h3 className="text-base font-bold text-nasmed-navy mb-5">Recent Activity</h3>
-                <div className="space-y-4">
-                  {[
-                    { action: "New membership application", user: "Dr. Halima Musa", time: "2 hours ago", icon: "📝" },
-                    { action: "Publication downloaded", user: "Prof. Adamu Ibrahim", time: "5 hours ago", icon: "📥" },
-                    { action: "Subscription renewed", user: "Dr. Folake Adeyemi", time: "1 day ago", icon: "💳" },
-                    { action: "Member profile updated", user: "Dr. Chukwuma Obi", time: "2 days ago", icon: "✏️" },
-                  ].map((activity, i) => (
-                    <div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-nasmed-off-white transition-all">
-                      <div className="w-10 h-10 bg-nasmed-off-white rounded-full flex items-center justify-center text-lg">{activity.icon}</div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-nasmed-navy">{activity.action}</div>
-                        <div className="text-xs text-nasmed-text-muted">{activity.user}</div>
+                {applications.slice(0, 4).length > 0 ? (
+                  <div className="space-y-4">
+                    {applications.slice(0, 4).map((a, i) => (
+                      <div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-nasmed-off-white transition-all">
+                        <div className="w-10 h-10 bg-nasmed-off-white rounded-full flex items-center justify-center text-lg">📝</div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-nasmed-navy">New membership application</div>
+                          <div className="text-xs text-nasmed-text-muted">{a.name}</div>
+                        </div>
+                        <div className="text-xs text-nasmed-text-muted">{a.date}</div>
                       </div>
-                      <div className="text-xs text-nasmed-text-muted">{activity.time}</div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-nasmed-text-muted text-center py-6">No recent activity.</p>
+                )}
               </div>
             </>
           )}
@@ -566,7 +692,7 @@ export default function AdminPage() {
                   <table className="w-full border-collapse">
                     <thead><tr>{["Name", "Email", "Tier", "State", "Date", "Payment", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(applications, ["name", "email", "prof", "tier"]).map(a => (
+                      {(filterRows(applications, ["name", "email", "prof", "tier"]) as DisplayApp[]).map(a => (
                         <tr key={a.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[13px] font-semibold">{a.name}</td>
                           <td className="py-3 px-3 text-[13px]">{a.email}</td>
@@ -574,8 +700,8 @@ export default function AdminPage() {
                           <td className="py-3 px-3 text-[13px]">{a.state}</td>
                           <td className="py-3 px-3 text-[13px]">{a.date}</td>
                           <td className="py-3 px-3">
-                            <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${(a as Record<string, unknown>).payment === "Paid" ? "bg-nasmed-green/15 text-nasmed-green" : (a as Record<string, unknown>).payment === "Transfer Pending" ? "bg-amber-500/15 text-amber-600" : "bg-gray-100 text-gray-500"}`}>
-                              {String((a as Record<string, unknown>).payment || "Pending")}
+                            <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${a.payment === "Paid" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-gray-100 text-gray-500"}`}>
+                              {a.payment}
                             </span>
                           </td>
                           <td className="py-3 px-3">{statusBadge(a.status)}</td>
@@ -592,6 +718,9 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
+                  {applications.length === 0 && (
+                    <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No applications yet.</div>
+                  )}
                 </div>
               </div>
             </>
@@ -611,8 +740,8 @@ export default function AdminPage() {
                   <table className="w-full border-collapse">
                     <thead><tr>{["ID", "Name", "Profession", "Tier", "State", "Joined", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(members, ["name", "prof", "tier"]).map(m => (
-                        <tr key={m.id} className="hover:bg-nasmed-off-white">
+                      {(filterRows(members, ["name", "prof", "tier"]) as DisplayMember[]).map(m => (
+                        <tr key={m._dbId || m.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[11px] font-mono">{m.id}</td>
                           <td className="py-3 px-3 text-[13px] font-semibold">{m.name}</td>
                           <td className="py-3 px-3 text-[13px]">{m.prof}</td>
@@ -623,13 +752,16 @@ export default function AdminPage() {
                           <td className="py-3 px-3">
                             <div className="flex gap-1.5">
                               <button onClick={() => setEditMember(m)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">Edit</button>
-                              <button onClick={() => deleteMember(m.id)} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">🗑</button>
+                              <button onClick={() => deleteMember(m._dbId || m.id)} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">🗑</button>
                             </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  {members.length === 0 && (
+                    <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No members yet. Use the Credentials section to initialize accounts.</div>
+                  )}
                 </div>
               </div>
             </>
@@ -640,7 +772,7 @@ export default function AdminPage() {
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Publications</h2>
               <p className="text-nasmed-text-muted text-sm mb-7">Create, manage and publish content for NASMED members.</p>
-              
+
               {/* Create New Publication */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
                 <h3 className="text-base font-bold text-nasmed-navy mb-5">Create New Publication</h3>
@@ -725,9 +857,9 @@ export default function AdminPage() {
                   <table className="w-full border-collapse">
                     <thead><tr>{["ID", "Title", "Type", "Access", "Price", "File", "Date", "Downloads", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(publications, ["title", "type", "access"]).map(p => (
+                      {(filterRows(publications, ["title", "type", "access"]) as DisplayPub[]).map(p => (
                         <tr key={p.id} className="hover:bg-nasmed-off-white">
-                          <td className="py-3 px-3 text-[11px] font-mono">{p.id}</td>
+                          <td className="py-3 px-3 text-[11px] font-mono">{p.id.slice(0, 8)}…</td>
                           <td className="py-3 px-3 text-[13px] font-semibold max-w-[180px] truncate">{p.title}</td>
                           <td className="py-3 px-3 text-[13px]">{p.type}</td>
                           <td className="py-3 px-3">{statusBadge(p.access)}</td>
@@ -746,6 +878,9 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
+                  {publications.length === 0 && (
+                    <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No publications yet.</div>
+                  )}
                 </div>
               </div>
             </>
@@ -756,7 +891,7 @@ export default function AdminPage() {
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Subscriptions</h2>
               <p className="text-nasmed-text-muted text-sm mb-7">Manage member subscriptions and renewals.</p>
-              
+
               {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-7">
                 <div className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-nasmed-green">
@@ -782,7 +917,7 @@ export default function AdminPage() {
                   <table className="w-full border-collapse">
                     <thead><tr>{["ID", "Member", "Tier", "Start Date", "Expiry Date", "Amount", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {filterRows(subscriptions, ["member", "tier"]).map(s => (
+                      {(filterRows(subscriptions, ["member", "tier"]) as Subscription[]).map(s => (
                         <tr key={s.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[11px] font-mono">{s.id}</td>
                           <td className="py-3 px-3 text-[13px] font-semibold">{s.member}</td>
@@ -810,7 +945,7 @@ export default function AdminPage() {
           {activeSection === "transactions" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Transactions</h2>
-              <p className="text-nasmed-text-muted text-sm mb-7">All payment records — membership registrations and additional contributions. Confirm bank transfers after verifying receipt.</p>
+              <p className="text-nasmed-text-muted text-sm mb-7">All payment records — membership registrations and additional contributions.</p>
 
               {/* Bank Account Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -838,14 +973,13 @@ export default function AdminPage() {
 
               {/* Summary cards */}
               {(() => {
-                const all = transactions;
-                const pending = all.filter(t => t.status === "awaiting_confirmation");
-                const confirmed = all.filter(t => t.status === "confirmed");
-                const contributions = all.filter(t => t.type === "contribution");
+                const pending = transactions.filter(t => t.status === "awaiting_confirmation");
+                const confirmed = transactions.filter(t => t.status === "confirmed");
+                const contributions = transactions.filter(t => t.type === "contribution");
                 return (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {[
-                      { label: "Total Payments", value: all.length, color: "border-nasmed-mid-blue" },
+                      { label: "Total Payments", value: transactions.length, color: "border-nasmed-mid-blue" },
                       { label: "Awaiting Confirmation", value: pending.length, color: "border-amber-500" },
                       { label: "Confirmed", value: confirmed.length, color: "border-nasmed-green" },
                       { label: "Contributions", value: contributions.length, color: "border-purple-500" },
@@ -864,7 +998,6 @@ export default function AdminPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-nasmed-navy">Payment Records</h3>
-                    {/* Type filter tabs */}
                     <div className="flex gap-1 ml-2">
                       {(["all", "membership", "contribution"] as const).map(f => (
                         <button
@@ -879,7 +1012,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex gap-3 items-center">
                     <button
-                      onClick={() => { try { setTransactions(JSON.parse(localStorage.getItem("nasmed_transactions") || "[]")); } catch { /* ignore */ } }}
+                      onClick={() => { transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {}); }}
                       className="text-[12px] text-nasmed-mid-blue border border-nasmed-mid-blue/30 py-1 px-3 rounded cursor-pointer bg-transparent hover:bg-nasmed-mid-blue/5"
                     >↻ Refresh</button>
                     <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[180px] focus:border-nasmed-mid-blue" placeholder="Search..." />
@@ -889,7 +1022,7 @@ export default function AdminPage() {
                 {(() => {
                   const filtered = transactions
                     .filter(t => txnTypeFilter === "all" || t.type === txnTypeFilter)
-                    .filter(t => !search || ["member","email","tier","ref","description"].some(k => String(t[k]||"").toLowerCase().includes(search.toLowerCase())));
+                    .filter(t => !search || ["member","email","tier","ref","description"].some(k => String((t as unknown as Record<string,unknown>)[k]||"").toLowerCase().includes(search.toLowerCase())));
                   return filtered.length === 0 ? (
                     <div className="text-center py-12 text-nasmed-text-muted text-[13px]">No transactions found.</div>
                   ) : (
@@ -903,45 +1036,45 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filtered.map((t, i) => (
-                            <tr key={i} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/40 last:border-0">
-                              <td className="py-3 px-3 text-[11px] font-mono text-nasmed-text-muted">{String(t.ref || "—")}</td>
+                          {filtered.map(t => (
+                            <tr key={t.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/40 last:border-0">
+                              <td className="py-3 px-3 text-[11px] font-mono text-nasmed-text-muted">{t.ref || "—"}</td>
                               <td className="py-3 px-3">
-                                <div className="text-[13px] font-semibold text-nasmed-navy">{String(t.member || "—")}</div>
-                                <div className="text-[11px] text-nasmed-text-muted">{String(t.email || "")}</div>
+                                <div className="text-[13px] font-semibold text-nasmed-navy">{t.member || "—"}</div>
+                                <div className="text-[11px] text-nasmed-text-muted">{t.email}</div>
                               </td>
                               <td className="py-3 px-3">
                                 <span className={`py-0.5 px-2 rounded-full text-[10px] font-bold ${t.type === "contribution" ? "bg-purple-500/10 text-purple-700" : "bg-nasmed-mid-blue/10 text-nasmed-mid-blue"}`}>
                                   {t.type === "contribution" ? "Contribution" : "Membership"}
                                 </span>
-                                <div className="text-[12px] text-nasmed-text-muted mt-0.5">{String(t.tier || "—")}</div>
+                                <div className="text-[12px] text-nasmed-text-muted mt-0.5">{t.tier || "—"}</div>
                               </td>
-                              <td className="py-3 px-3 text-[13px] font-bold text-nasmed-navy whitespace-nowrap">{String(t.amount || "—")} <span className="text-[11px] font-normal text-nasmed-text-muted">{String(t.currency || "NGN")}</span></td>
+                              <td className="py-3 px-3 text-[13px] font-bold text-nasmed-navy whitespace-nowrap">{t.amount || "—"} <span className="text-[11px] font-normal text-nasmed-text-muted">{t.currency}</span></td>
                               <td className="py-3 px-3">
                                 <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${t.method === "Paystack" ? "bg-[#0BA4DB]/10 text-[#0993c5]" : "bg-amber-500/10 text-amber-700"}`}>
-                                  {String(t.method || "—")}
+                                  {t.method || "—"}
                                 </span>
                               </td>
-                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted max-w-[140px] truncate" title={String(t.description || "")}>
-                                {String(t.description || "—")}
+                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted max-w-[140px] truncate" title={t.description}>
+                                {t.description || "—"}
                               </td>
                               <td className="py-3 px-3">
                                 {t.receiptUrl ? (
-                                  <a href={String(t.receiptUrl)} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-nasmed-mid-blue hover:underline whitespace-nowrap">
-                                    {String(t.receiptName || "receipt").endsWith(".pdf") ? "📋 PDF" : "🖼️ Image"}
+                                  <a href={t.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-nasmed-mid-blue hover:underline whitespace-nowrap">
+                                    {(t.receiptName || "receipt").endsWith(".pdf") ? "📋 PDF" : "🖼️ Image"}
                                   </a>
                                 ) : (
                                   <span className="text-[11px] text-nasmed-text-muted">None</span>
                                 )}
                               </td>
                               <td className="py-3 px-3">
-                                {statusBadge(t.status === "confirmed" ? "approved" : t.status === "awaiting_confirmation" ? "pending" : String(t.status || "pending"))}
+                                {statusBadge(t.status === "confirmed" ? "approved" : t.status === "awaiting_confirmation" ? "pending" : t.status)}
                               </td>
-                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted whitespace-nowrap">{String(t.date || "—")}</td>
+                              <td className="py-3 px-3 text-[12px] text-nasmed-text-muted whitespace-nowrap">{t.date || "—"}</td>
                               <td className="py-3 px-3">
                                 {t.status === "awaiting_confirmation" ? (
                                   <button
-                                    onClick={() => handleConfirmTransaction(String(t.ref))}
+                                    onClick={() => handleConfirmTransaction(t.id)}
                                     className="bg-nasmed-green text-white border-none py-1.5 px-3 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-nasmed-green-light whitespace-nowrap"
                                   >
                                     ✓ Confirm
@@ -1004,7 +1137,7 @@ export default function AdminPage() {
                     <thead><tr>{["ID", "Name", "Position", "Username", "Password", "Must Change", "Status"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
                       {members.map(m => (
-                        <tr key={m.id} className="hover:bg-nasmed-off-white">
+                        <tr key={m._dbId || m.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[11px] font-mono">{m.id}</td>
                           <td className="py-3 px-3 text-[13px] font-semibold">{m.name}</td>
                           <td className="py-3 px-3 text-xs text-nasmed-text-muted">{m.position || m.prof}</td>
@@ -1016,6 +1149,9 @@ export default function AdminPage() {
                       ))}
                     </tbody>
                   </table>
+                  {members.length === 0 && (
+                    <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No member accounts yet. Click "Initialize All Accounts" above.</div>
+                  )}
                 </div>
               </div>
             </>
@@ -1058,20 +1194,20 @@ export default function AdminPage() {
               {/* Payment Receipt */}
               <div className="mt-6">
                 <p className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-mid-blue mb-3">Payment Receipt</p>
-                {(viewApp as any).receiptUrl ? (
+                {viewApp.receiptUrl ? (
                   <div className="border border-nasmed-green/30 rounded-lg p-4 bg-nasmed-green/5 flex items-center gap-4">
-                    <span className="text-3xl">{((viewApp as any).receiptName || "").endsWith(".pdf") ? "📋" : "🖼️"}</span>
+                    <span className="text-3xl">{(viewApp.receiptName || "").endsWith(".pdf") ? "📋" : "🖼️"}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-nasmed-navy truncate">{(viewApp as any).receiptName || "Payment Receipt"}</p>
+                      <p className="text-[13px] font-semibold text-nasmed-navy truncate">{viewApp.receiptName || "Payment Receipt"}</p>
                       <p className="text-[11px] text-nasmed-green font-semibold mt-0.5">Receipt submitted by applicant</p>
                     </div>
                     <a
-                      href={(viewApp as any).receiptUrl}
+                      href={viewApp.receiptUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="shrink-0 bg-nasmed-navy text-white text-[12px] font-semibold py-2 px-4 rounded-lg hover:opacity-90 no-underline"
                     >
-                      {((viewApp as any).receiptName || "").endsWith(".pdf") ? "Open PDF" : "View Image"}
+                      {(viewApp.receiptName || "").endsWith(".pdf") ? "Open PDF" : "View Image"}
                     </a>
                   </div>
                 ) : (
@@ -1166,8 +1302,10 @@ export default function AdminPage() {
                   <label className="text-[13px] font-semibold text-nasmed-navy">Tier</label>
                   <select value={editMember.tier} onChange={e => setEditMember({...editMember, tier: e.target.value})} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm">
                     <option>Associate Member</option>
-                    <option>Professional Member</option>
+                    <option>Individual Member</option>
                     <option>Fellow (FNASMED)</option>
+                    <option>Student Membership</option>
+                    <option>International Membership</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -1192,6 +1330,20 @@ export default function AdminPage() {
               <button onClick={() => setEditMember(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
               <button onClick={saveMember} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden certificate frame used for email capture */}
+      {certToSend && (
+        <div style={{ position: "fixed", left: "-9999px", top: 0, visibility: "hidden", pointerEvents: "none" }}>
+          <div id="admin-cert-hidden">
+            <CertificateFrame
+              memberName={certToSend.name}
+              certNumber={certToSend.certNumber}
+              date={certToSend.date}
+              membershipType={certToSend.tier}
+            />
           </div>
         </div>
       )}

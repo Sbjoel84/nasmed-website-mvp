@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import { applicationService } from "@/services/applicationService";
+import transactionService from "@/services/transactionService";
 import authService from "@/lib/authService";
 import supabase from "@/lib/supabaseClient";
 import PaystackPop from "@paystack/inline-js";
@@ -49,6 +50,23 @@ const otherPayments = [
   { label: "Donations", price: "Open Amount", desc: "Contribute to NASMED's mission and programmes", icon: "💚" },
 ];
 
+// ── Update these with NASMED's actual bank account details ──
+const BANK_ACCOUNTS = {
+  NGN: {
+    bankName: "Union Bank",
+    accountName: "Nigerian Association of Sports Medicine",
+    accountNumber: "0227297914",
+    sortCode: "055",
+  },
+  USD: {
+    bankName: "Zenith Bank (Domiciliary)",
+    accountName: "Nigerian Association of Sports Medicine",
+    accountNumber: "0000000000", // ← replace with actual USD account number
+    swiftCode: "ZEIBNGLA",
+    sortCode: "057",
+  },
+};
+
 export default function MembershipPage() {
   const [searchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
@@ -59,11 +77,6 @@ export default function MembershipPage() {
     return `NASMED/${yr}/${seq}`;
   });
   const [currentAppId, setCurrentAppId] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState("");
-  const [receiptName, setReceiptName] = useState("");
-  const [receiptUploading, setReceiptUploading] = useState(false);
-  const [receiptError, setReceiptError] = useState("");
-  const receiptInputRef = useRef<HTMLInputElement>(null);
   const plansRef = useRef<HTMLElement>(null);
 
   // Receipt upload state for Additional Contributions simple pay
@@ -73,10 +86,19 @@ export default function MembershipPage() {
   const [simpleReceiptError, setSimpleReceiptError] = useState("");
   const [simplePayTxnRef, setSimplePayTxnRef] = useState("");
   const [step, setStep] = useState(1);
+  const [paymentDone, setPaymentDone] = useState(false);
+  const [cardData, setCardData] = useState({ name: "", number: "", expiry: "", cvv: "" });
+  const [cardError, setCardError] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer' | null>(null);
+  const [bankReceiptUrl, setBankReceiptUrl] = useState("");
+  const [bankReceiptName, setBankReceiptName] = useState("");
+  const [bankReceiptUploading, setBankReceiptUploading] = useState(false);
+  const [bankReceiptError, setBankReceiptError] = useState("");
+  const [bankTxnRef, setBankTxnRef] = useState("");
 
   // Simple payment modal state (Additional Contributions)
   const [showSimplePay, setShowSimplePay] = useState(false);
-  const [simplePayItem, setSimplePayItem] = useState<{ label: string; price: string; icon: string } | null>(null);
+  const [simplePayItem, setSimplePayItem] = useState<{ label: string; price: string; desc: string; icon: string } | null>(null);
   const [simplePayStep, setSimplePayStep] = useState<1 | 2 | 3>(1);
   const [simplePayData, setSimplePayData] = useState({ name: "", email: "", amount: "", description: "" });
   const [simplePayErr, setSimplePayErr] = useState("");
@@ -107,6 +129,38 @@ export default function MembershipPage() {
   const closeForm = () => {
     setShowForm(false);
     setStep(1);
+    setPaymentDone(false);
+    setCardData({ name: "", number: "", expiry: "", cvv: "" });
+    setCardError("");
+    setPaymentMethod(null);
+    setBankReceiptUrl("");
+    setBankReceiptName("");
+    setBankReceiptUploading(false);
+    setBankReceiptError("");
+    setBankTxnRef("");
+  };
+
+  const formatCardNumber = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(.{4})/g, "$1 ").trim();
+  };
+
+  const formatExpiry = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 4);
+    if (digits.length >= 3) return digits.slice(0, 2) + "/" + digits.slice(2);
+    return digits;
+  };
+
+  const handleCardPay = () => {
+    const rawNumber = cardData.number.replace(/\s/g, "");
+    if (!cardData.name.trim()) { setCardError("Please enter the cardholder name."); return; }
+    if (rawNumber.length < 16) { setCardError("Please enter a valid 16-digit card number."); return; }
+    if (!cardData.expiry.match(/^\d{2}\/\d{2}$/)) { setCardError("Please enter expiry date as MM/YY."); return; }
+    const [mm] = cardData.expiry.split("/").map(Number);
+    if (mm < 1 || mm > 12) { setCardError("Expiry month must be between 01 and 12."); return; }
+    if (cardData.cvv.length < 3) { setCardError("Please enter a valid 3 or 4-digit CVV."); return; }
+    setCardError("");
+    handlePaystack();
   };
 
   const openSimplePay = (item: typeof otherPayments[0]) => {
@@ -138,25 +192,21 @@ export default function MembershipPage() {
   };
 
   const saveSimpleTransaction = (ref: string, method: string, status: string) => {
-    try {
-      setSimplePayTxnRef(ref);
-      setSimpleReceiptUrl(""); setSimpleReceiptName("");
-      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
-      txns.unshift({
-        ref,
-        member: simplePayData.name,
-        email: simplePayData.email,
-        tier: simplePayItem?.label,
-        amount: `₦${Number(simplePayData.amount.replace(/,/g, "")).toLocaleString()}`,
-        currency: "NGN",
-        method,
-        status,
-        description: simplePayData.description || "",
-        date: new Date().toLocaleDateString("en-GB"),
-        type: "contribution",
-      });
-      localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
-    } catch { /* ignore */ }
+    setSimplePayTxnRef(ref);
+    setSimpleReceiptUrl("");
+    setSimpleReceiptName("");
+    transactionService.create({
+      payment_ref: ref,
+      member_name: simplePayData.name,
+      email: simplePayData.email,
+      membership_type: simplePayItem?.label || "",
+      amount: `₦${Number(simplePayData.amount.replace(/,/g, "")).toLocaleString()}`,
+      currency: "NGN",
+      payment_method: method,
+      status,
+      type: "contribution",
+      description: simplePayData.description || "",
+    }).catch(() => {});
   };
 
   const handleSimpleReceiptUpload = async (file: File) => {
@@ -170,9 +220,9 @@ export default function MembershipPage() {
       const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
       setSimpleReceiptUrl(publicUrl);
       setSimpleReceiptName(file.name);
-      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
-      const idx = txns.findIndex(t => t.ref === simplePayTxnRef);
-      if (idx >= 0) { txns[idx].receiptUrl = publicUrl; txns[idx].receiptName = file.name; localStorage.setItem("nasmed_transactions", JSON.stringify(txns)); }
+      if (simplePayTxnRef) {
+        transactionService.updateReceiptByRef(simplePayTxnRef, publicUrl, file.name).catch(() => {});
+      }
       toast.success("Receipt uploaded!");
     } catch {
       setSimpleReceiptError("Upload failed. Ensure a 'receipts' bucket exists in Supabase, or email receipt to info@nasmed.org.");
@@ -229,47 +279,7 @@ export default function MembershipPage() {
 
     setIsSubmitting(true);
     try {
-      const appId = "APP-" + Date.now();
-      setCurrentAppId(appId);
-
-      // Save to localStorage immediately — admin dashboard reads from here
-      const appEntry = {
-        id: appId,
-        name: formData.fullName,
-        email: formData.email,
-        prof: formData.category,
-        tier: formData.category,
-        state: formData.state,
-        date: new Date().toLocaleDateString("en-GB"),
-        status: "pending",
-        phone: formData.mobile,
-        altEmail: "",
-        qualifications: "",
-        workplace: "",
-        referee1: { name: formData.ref1Name, email: formData.ref1Email, mobile: formData.ref1Mobile },
-        referee2: { name: formData.ref2Name, email: formData.ref2Email, mobile: formData.ref2Mobile },
-        statement: formData.statement,
-        payment: "Pending",
-        paymentMethod: "",
-        paymentRef: "",
-        submitted: new Date().toLocaleDateString("en-GB"),
-      };
-      const existing: unknown[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
-      localStorage.setItem("nasmed_applications", JSON.stringify([appEntry, ...existing]));
-
-      // Create Supabase auth account — best-effort, never blocks submission
-      authService.signUp(formData.email, formData.password, formData.fullName, formData.category)
-        .then(({ error }) => {
-          if (error && !error.toLowerCase().includes("already registered")) {
-            console.warn("Supabase account creation failed:", error);
-          } else {
-            authService.setInitialUsername(formData.email, formData.fullName).catch(() => {});
-          }
-        })
-        .catch(() => {});
-
-      // Best-effort Supabase sync — don't block on this
-      applicationService.create({
+      const app = await applicationService.create({
         full_name: formData.fullName,
         email: formData.email,
         phone: formData.mobile,
@@ -285,10 +295,40 @@ export default function MembershipPage() {
         referee2_email: formData.ref2Email || "",
         referee2_phone: formData.ref2Mobile || "",
         statement: formData.statement,
-      }).catch(() => {});
+      });
+      setCurrentAppId(app.id);
+
+      // Create Supabase auth account — best-effort, never blocks submission
+      authService.signUp(formData.email, formData.password, formData.fullName, formData.category)
+        .then(({ error }) => {
+          if (error && !error.toLowerCase().includes("already registered")) {
+            console.warn("Supabase account creation failed:", error);
+          } else {
+            authService.setInitialUsername(formData.email, formData.fullName).catch(() => {});
+          }
+        })
+        .catch(() => {});
 
       toast.success("Application submitted! Please complete your payment.");
       setStep(5);
+    } catch (err: unknown) {
+      console.error('Application submission error:', err);
+      const raw = err instanceof Error
+        ? err.message
+        : (typeof err === 'object' && err !== null && 'message' in err)
+          ? String((err as Record<string, unknown>).message)
+          : String(err);
+      if (raw.includes('does not exist') || raw.includes('relation') || raw.includes('schema')) {
+        toast.error("Database not configured — please ensure the Supabase schema has been run, or contact support.");
+      } else if (raw.includes('violates row-level security') || raw.includes('permission') || raw.includes('policy')) {
+        toast.error("Database permission error — the applications table RLS policy may be missing. Run the schema SQL again.");
+      } else if (raw.includes('duplicate') || raw.includes('unique') || raw.includes('already exists')) {
+        toast.error("An application with this email already exists. Contact info@nasmed.org if this is a mistake.");
+      } else if (raw.includes('network') || raw.includes('fetch') || raw.includes('Failed to fetch')) {
+        toast.error("Network error — check your internet connection and try again.");
+      } else {
+        toast.error(`Submission failed: ${raw.length > 120 ? raw.slice(0, 120) + '…' : raw}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -310,62 +350,45 @@ export default function MembershipPage() {
     "Annual Dues": 2500000,
   };
 
-  const handleReceiptUpload = async (file: File) => {
-    setReceiptUploading(true);
-    setReceiptError("");
-    try {
-      const ext = file.name.split(".").pop();
-      const fileName = `receipts/${currentAppId || Date.now()}-${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
-      if (uploadErr) throw uploadErr;
-      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
-      setReceiptUrl(publicUrl);
-      setReceiptName(file.name);
-      // Update the localStorage app entry with the receipt URL
-      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
-      const idx = stored.findIndex(a => a.id === currentAppId);
-      if (idx >= 0) {
-        stored[idx].receiptUrl = publicUrl;
-        stored[idx].receiptName = file.name;
-        stored[idx].payment = "Receipt Uploaded";
-        localStorage.setItem("nasmed_applications", JSON.stringify(stored));
-      }
-      toast.success("Receipt uploaded successfully!");
-    } catch {
-      setReceiptError("Upload failed. Please ensure a 'receipts' storage bucket exists in Supabase, or email your receipt to info@nasmed.org.");
-    } finally {
-      setReceiptUploading(false);
+  const saveTransaction = (ref: string, method: string, status: string) => {
+    transactionService.create({
+      payment_ref: ref,
+      member_name: formData.fullName,
+      email: formData.email,
+      membership_type: formData.category,
+      amount: planPrice,
+      currency: formData.category === "International Membership" ? "USD" : "NGN",
+      payment_method: method,
+      status,
+      type: "membership",
+      description: "",
+      application_id: currentAppId || undefined,
+    }).catch(() => {});
+    if (currentAppId && status === "confirmed") {
+      applicationService.updatePayment(currentAppId, ref, method).catch(() => {});
     }
   };
 
-  const saveTransaction = (ref: string, method: string, status: string) => {
+  const handleBankReceiptUpload = async (file: File) => {
+    setBankReceiptUploading(true);
+    setBankReceiptError("");
     try {
-      // Update application payment status
-      const stored: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_applications") || "[]");
-      const idx = stored.findIndex(a => a.id === currentAppId);
-      if (idx >= 0) {
-        stored[idx].payment = status === "confirmed" ? "Paid" : "Transfer Pending";
-        stored[idx].paymentMethod = method;
-        stored[idx].paymentRef = ref;
-        localStorage.setItem("nasmed_applications", JSON.stringify(stored));
-      }
-      // Append transaction record
-      const txns: Record<string, unknown>[] = JSON.parse(localStorage.getItem("nasmed_transactions") || "[]");
-      txns.unshift({
-        ref,
-        member: formData.fullName,
-        email: formData.email,
-        tier: formData.category,
-        amount: planPrice,
-        currency: formData.category === "International Membership" ? "USD" : "NGN",
-        method,
-        status,
-        date: new Date().toLocaleDateString("en-GB"),
-        type: "membership",
-        appId: currentAppId,
-      });
-      localStorage.setItem("nasmed_transactions", JSON.stringify(txns));
-    } catch { /* ignore */ }
+      const ext = file.name.split(".").pop();
+      const ref = bankTxnRef || `BNK-${currentAppId || Date.now()}`;
+      setBankTxnRef(ref);
+      const fileName = `receipts/member-${ref}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+      const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
+      setBankReceiptUrl(publicUrl);
+      setBankReceiptName(file.name);
+      saveTransaction(ref, "Bank Transfer", "pending");
+      toast.success("Receipt uploaded! Admin will verify and activate your account.");
+    } catch {
+      setBankReceiptError("Upload failed. Ensure a 'receipts' storage bucket exists in Supabase, or email your receipt to info@nasmed.org.");
+    } finally {
+      setBankReceiptUploading(false);
+    }
   };
 
   const handlePaystack = () => {
@@ -383,6 +406,7 @@ export default function MembershipPage() {
       onSuccess: (transaction: Record<string, unknown>) => {
         const ref = (transaction?.reference as string) || ("PSK-" + Date.now());
         saveTransaction(ref, "Paystack", "confirmed");
+        setPaymentDone(true);
         toast.success("Payment successful! Your membership will be activated shortly.");
         setStep(6);
       },
@@ -585,22 +609,38 @@ export default function MembershipPage() {
             {step === 6 ? (
               <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                 <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-blue p-7">
-                  <span className="inline-block bg-nasmed-green/30 text-nasmed-green-light text-[11px] font-bold tracking-[2px] uppercase py-1 px-3 rounded mb-3">Application Received</span>
-                  <h3 className="text-white font-heading text-[22px] mb-1.5">🎉 Registration Complete!</h3>
-                  <p className="text-white/65 text-[13px]">Your application is pending admin review. Download or email your provisional certificate below.</p>
+                  <span className="inline-block bg-nasmed-green/30 text-nasmed-green-light text-[11px] font-bold tracking-[2px] uppercase py-1 px-3 rounded mb-3">Payment Received</span>
+                  <h3 className="text-white font-heading text-[22px] mb-1.5">🎉 Application Submitted!</h3>
+                  <p className="text-white/65 text-[13px]">Your payment has been recorded. Admin will verify and confirm your registration.</p>
                 </div>
-                <div className="p-7 max-h-[55vh] overflow-y-auto flex flex-col items-center gap-5">
-                  <p className="text-[14px] text-nasmed-text-muted text-center leading-relaxed max-w-[500px]">
-                    Thank you <strong>{formData.fullName}</strong>. Your application has been submitted for review and you will receive a confirmation at <strong>{formData.email}</strong> within <strong>5–10 business days</strong>.
-                  </p>
-                  <div className="overflow-x-auto pb-2 w-full">
-                    <MembershipCertificate
-                      memberName={formData.fullName}
-                      certNumber={certNumber}
-                      date={new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}
-                      membershipType={formData.category}
-                      email={formData.email}
-                    />
+                <div className="p-8 flex flex-col items-center gap-6">
+                  {/* Status indicator */}
+                  <div className="w-20 h-20 rounded-full bg-amber-100 border-4 border-amber-400 flex items-center justify-center text-4xl">
+                    ⏳
+                  </div>
+                  <div className="text-center max-w-[480px]">
+                    <h4 className="font-heading text-nasmed-navy text-[20px] font-bold mb-3">Pending Admin Verification</h4>
+                    <p className="text-[14px] text-nasmed-text-muted leading-relaxed">
+                      Thank you, <strong>{formData.fullName}</strong>. Your payment and application are now under review by the NASMED admin team.
+                    </p>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="w-full max-w-[440px] flex flex-col gap-3">
+                    {[
+                      { icon: "✅", label: "Payment recorded", done: true },
+                      { icon: "🔍", label: "Admin verifies payment & registration", done: false },
+                      { icon: "📧", label: "Membership certificate sent to your email", done: false },
+                    ].map((s, i) => (
+                      <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl border ${s.done ? "bg-nasmed-green/8 border-nasmed-green/30" : "bg-nasmed-off-white border-nasmed-gray-light"}`}>
+                        <span className="text-xl shrink-0">{s.icon}</span>
+                        <span className={`text-[13px] font-semibold ${s.done ? "text-nasmed-green" : "text-nasmed-text-muted"}`}>{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-nasmed-mid-blue/5 border border-nasmed-mid-blue/20 rounded-xl p-4 text-[13px] text-nasmed-text-muted text-center leading-relaxed max-w-[440px]">
+                    Your membership certificate will be <strong>emailed to {formData.email}</strong> once your payment is confirmed and registration approved by admin (typically within <strong>5–10 business days</strong>).
                   </div>
                 </div>
                 <div className="flex items-center justify-end px-7 py-4 border-t border-nasmed-gray-light bg-nasmed-off-white">
@@ -809,129 +849,201 @@ export default function MembershipPage() {
                   )}
 
                   {step === 5 && (
-                    <div className="space-y-6">
+                    <div className="space-y-5">
+
+                      {/* Amount due */}
                       {planPrice && (
                         <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4 flex items-center justify-between">
-                          <span className="text-[13px] text-nasmed-text-muted">Amount Due ({formData.category})</span>
-                          <span className="text-[22px] font-bold text-nasmed-navy">{planPrice}<span className="text-[13px] font-normal text-nasmed-gray">/year</span></span>
+                          <span className="text-[13px] text-nasmed-text-muted">Amount due — {formData.category}</span>
+                          <span className="text-[22px] font-bold text-nasmed-navy">{planPrice}</span>
                         </div>
                       )}
 
-                      {/* Bank Transfer */}
-                      <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
-                        <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
-                          <span className="text-[18px]">🏦</span>
-                          <span className="font-bold text-[14px] text-nasmed-navy">Direct Bank Transfer</span>
-                        </div>
-                        <div className="p-5 space-y-4">
-                          <p className="text-[13px] text-nasmed-text-muted leading-relaxed">Transfer the membership fee directly to one of the NASMED accounts below, then send your proof of payment to <strong>info@nasmed.org</strong>.</p>
-
-                          {/* Naira Account */}
-                          <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-0.5 rounded-full">Naira Account</span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[13px]">
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p>
-                                <p className="font-bold text-nasmed-navy">NASMED</p>
-                              </div>
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Number</p>
-                                <p className="font-bold text-nasmed-navy tracking-widest">0227297914</p>
-                              </div>
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p>
-                                <p className="font-bold text-nasmed-navy">Union Bank of Nigeria</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Dollar Account */}
-                          <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full">Dollar Account</span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[13px]">
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p>
-                                <p className="font-bold text-nasmed-navy">NASMED</p>
-                              </div>
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Number</p>
-                                <p className="font-bold text-nasmed-navy tracking-widest">0227342474</p>
-                              </div>
-                              <div>
-                                <p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p>
-                                <p className="font-bold text-nasmed-navy">Union Bank of Nigeria</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Paystack */}
-                      <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
-                        <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
-                          <span className="text-[18px]">💳</span>
-                          <span className="font-bold text-[14px] text-nasmed-navy">Pay Online via Paystack</span>
-                        </div>
-                        <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                          <p className="text-[13px] text-nasmed-text-muted leading-relaxed flex-1">Pay securely online using your debit/credit card, bank transfer, or USSD via Paystack — Nigeria's trusted payment gateway.</p>
-                          <button
-                            type="button"
-                            onClick={handlePaystack}
-                            className="shrink-0 bg-[#0BA4DB] hover:bg-[#0993c5] text-white font-semibold text-[13px] py-2.5 px-6 rounded-lg transition-colors border-none cursor-pointer"
-                          >
-                            Pay with Paystack →
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Receipt Upload */}
-                      <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden">
-                        <div className="bg-nasmed-green/8 px-5 py-3 flex items-center gap-3 border-b border-nasmed-green/20">
-                          <span className="text-[18px]">📄</span>
+                      {paymentDone && (
+                        <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
+                          <span className="text-2xl">✅</span>
                           <div>
-                            <span className="font-bold text-[14px] text-nasmed-navy">Upload Payment Receipt</span>
-                            <p className="text-[11px] text-nasmed-text-muted mt-0.5">PDF, JPG, or PNG — max 5MB</p>
+                            <p className="text-[14px] font-bold text-nasmed-green">Card Payment Successful!</p>
+                            <p className="text-[12px] text-nasmed-green/80">Click Continue below to complete your registration.</p>
                           </div>
                         </div>
-                        <div className="p-5">
-                          {receiptUrl ? (
-                            <div className="flex items-center gap-3 bg-nasmed-green/10 border border-nasmed-green/30 rounded-lg px-4 py-3">
-                              <span className="text-2xl">{receiptName.endsWith(".pdf") ? "📋" : "🖼️"}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-nasmed-navy truncate">{receiptName}</p>
-                                <p className="text-[11px] text-nasmed-green font-semibold">Receipt uploaded successfully</p>
-                              </div>
-                              <a href={receiptUrl} target="_blank" rel="noopener noreferrer" className="text-[12px] text-nasmed-mid-blue font-semibold hover:underline shrink-0">View</a>
-                              <button type="button" onClick={() => { setReceiptUrl(""); setReceiptName(""); }} className="text-[11px] text-nasmed-text-muted hover:text-red-500 bg-transparent border-none cursor-pointer shrink-0">Replace</button>
-                            </div>
-                          ) : (
-                            <label className={`flex flex-col items-center justify-center gap-3 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${receiptUploading ? "border-nasmed-mid-blue bg-nasmed-mid-blue/5" : "border-nasmed-gray-light hover:border-nasmed-green hover:bg-nasmed-green/5"}`}>
-                              <span className="text-3xl">{receiptUploading ? "⏳" : "📎"}</span>
-                              <div className="text-center">
-                                <p className="text-[13px] font-semibold text-nasmed-navy">{receiptUploading ? "Uploading…" : "Click to upload your payment receipt"}</p>
-                                <p className="text-[11px] text-nasmed-text-muted mt-1">Bank transfer slip, online receipt, or payment screenshot</p>
-                              </div>
-                              <input
-                                ref={receiptInputRef}
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                className="hidden"
-                                disabled={receiptUploading}
-                                onChange={e => { const f = e.target.files?.[0]; if (f) handleReceiptUpload(f); }}
-                              />
-                            </label>
-                          )}
-                          {receiptError && <p className="text-[12px] text-red-600 mt-3 leading-relaxed">{receiptError}</p>}
+                      )}
+                      {bankReceiptUrl && (
+                        <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
+                          <span className="text-2xl">📄</span>
+                          <div>
+                            <p className="text-[14px] font-bold text-nasmed-green">Receipt Uploaded Successfully!</p>
+                            <p className="text-[12px] text-nasmed-green/80">Admin will verify your transfer and activate your account. Click Continue.</p>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-[12px] text-amber-800 leading-relaxed">
-                        <strong>Note:</strong> Upload your payment receipt above. Your membership will be activated once payment is confirmed by the admin. You may also email your receipt to <strong>info@nasmed.org</strong>.
-                      </div>
+                      {!paymentDone && !bankReceiptUrl && (
+                        <>
+                          {/* Payment method selector */}
+                          <div>
+                            <p className="text-[13px] font-semibold text-nasmed-navy mb-3">Select Payment Method</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              {[
+                                { method: 'card' as const, icon: '💳', label: 'Card Payment', desc: 'Instant — Visa, Mastercard, Verve' },
+                                { method: 'bank_transfer' as const, icon: '🏦', label: 'Bank Transfer', desc: 'Transfer funds & upload receipt' },
+                              ].map(opt => (
+                                <button
+                                  key={opt.method}
+                                  type="button"
+                                  onClick={() => setPaymentMethod(opt.method)}
+                                  className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-transparent ${paymentMethod === opt.method ? 'border-nasmed-mid-blue bg-nasmed-mid-blue/5 shadow-sm' : 'border-nasmed-gray-light hover:border-nasmed-mid-blue/50'}`}
+                                >
+                                  <div className="text-2xl mb-1.5">{opt.icon}</div>
+                                  <div className="font-bold text-[14px] text-nasmed-navy">{opt.label}</div>
+                                  <div className="text-[12px] text-nasmed-text-muted mt-0.5">{opt.desc}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Card payment form */}
+                          {paymentMethod === 'card' && (
+                            <div className="border-2 border-[#0BA4DB] rounded-2xl overflow-hidden">
+                              <div className="bg-gradient-to-r from-[#0BA4DB] to-[#0781b0] px-5 py-3.5 flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-[20px]">💳</span>
+                                  <span className="font-bold text-[14px] text-white">Secure Card Payment</span>
+                                </div>
+                                <div className="flex gap-1.5">
+                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">VISA</div>
+                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">MC</div>
+                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">VERVE</div>
+                                </div>
+                              </div>
+                              <div className="p-6 flex flex-col gap-4 bg-white">
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Cardholder Name <span className="text-red-500">*</span></label>
+                                  <input type="text" value={cardData.name} onChange={e => setCardData(p => ({ ...p, name: e.target.value }))} placeholder="Full name as on card" className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] outline-none focus:border-[#0BA4DB] transition-colors" />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Card Number <span className="text-red-500">*</span></label>
+                                  <div className="relative">
+                                    <input type="text" inputMode="numeric" value={cardData.number} onChange={e => setCardData(p => ({ ...p, number: formatCardNumber(e.target.value) }))} placeholder="0000  0000  0000  0000" maxLength={19} className="w-full py-3 px-4 pr-12 border-2 border-nasmed-gray-light rounded-lg text-[15px] font-mono tracking-widest outline-none focus:border-[#0BA4DB] transition-colors" />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[18px] opacity-40">💳</span>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Expiry Date <span className="text-red-500">*</span></label>
+                                    <input type="text" inputMode="numeric" value={cardData.expiry} onChange={e => setCardData(p => ({ ...p, expiry: formatExpiry(e.target.value) }))} placeholder="MM / YY" maxLength={5} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">CVV <span className="text-red-500">*</span></label>
+                                    <input type="password" inputMode="numeric" value={cardData.cvv} onChange={e => setCardData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="•••" maxLength={4} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
+                                  </div>
+                                </div>
+                                {cardError && (
+                                  <div className="flex items-center gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-2.5 text-[13px] text-red-700 font-semibold">
+                                    <span>⚠</span> {cardError}
+                                  </div>
+                                )}
+                                <div className="flex items-start gap-2 text-[11px] text-nasmed-text-muted bg-nasmed-off-white rounded-lg p-3">
+                                  <span className="shrink-0">🔒</span>
+                                  <span>Your card details are processed securely by Paystack. NASMED does not store your card information. You will be charged <strong>{planPrice}</strong> immediately upon submission.</span>
+                                </div>
+                                <button type="button" onClick={handleCardPay} className="w-full bg-[#0BA4DB] hover:bg-[#0781b0] active:bg-[#0669a0] text-white font-bold text-[15px] py-4 rounded-xl transition-colors border-none cursor-pointer flex items-center justify-center gap-2 shadow-md">
+                                  🔒 Pay {planPrice} Now →
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bank transfer section */}
+                          {paymentMethod === 'bank_transfer' && (
+                            <div className="space-y-4">
+                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-[12px] text-amber-800 leading-relaxed">
+                                <strong>How it works:</strong> Transfer the exact amount to the account below, upload your proof of payment, and admin will verify and activate your membership within 3–5 business days.
+                              </div>
+
+                              {formData.category !== "International Membership" ? (
+                                <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
+                                  <div className="bg-gradient-to-r from-nasmed-navy to-nasmed-mid-blue px-5 py-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="text-[17px]">🏦</span>
+                                      <span className="font-bold text-[14px] text-white">Naira Account (NGN)</span>
+                                    </div>
+                                    <span className="text-[11px] text-nasmed-green-light font-bold tracking-wide uppercase bg-nasmed-green/25 px-2.5 py-0.5 rounded-full">Local Transfer</span>
+                                  </div>
+                                  <div className="bg-white divide-y divide-nasmed-gray-light">
+                                    {[
+                                      { label: "Bank", value: BANK_ACCOUNTS.NGN.bankName, copy: false },
+                                      { label: "Account Name", value: BANK_ACCOUNTS.NGN.accountName, copy: false },
+                                      { label: "Account No.", value: BANK_ACCOUNTS.NGN.accountNumber, copy: true },
+                                      { label: "Sort Code", value: BANK_ACCOUNTS.NGN.sortCode, copy: false },
+                                    ].map(row => (
+                                      <div key={row.label} className="flex items-center justify-between px-5 py-3">
+                                        <span className="text-[12px] text-nasmed-text-muted font-semibold uppercase tracking-wide">{row.label}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[14px] font-bold text-nasmed-navy">{row.value}</span>
+                                          {row.copy && (
+                                            <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Account number copied!"); }} className="text-[11px] text-nasmed-mid-blue font-semibold bg-nasmed-mid-blue/10 px-2 py-0.5 rounded cursor-pointer border-none hover:bg-nasmed-mid-blue/20">Copy</button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="border-2 border-amber-300 rounded-xl overflow-hidden">
+                                  <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-5 py-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="text-[17px]">🌐</span>
+                                      <span className="font-bold text-[14px] text-white">Dollar Account (USD)</span>
+                                    </div>
+                                    <span className="text-[11px] text-white font-bold tracking-wide uppercase bg-white/20 px-2.5 py-0.5 rounded-full">International</span>
+                                  </div>
+                                  <div className="bg-white divide-y divide-nasmed-gray-light">
+                                    {[
+                                      { label: "Bank", value: BANK_ACCOUNTS.USD.bankName, copy: false },
+                                      { label: "Account Name", value: BANK_ACCOUNTS.USD.accountName, copy: false },
+                                      { label: "Account No.", value: BANK_ACCOUNTS.USD.accountNumber, copy: true },
+                                      { label: "SWIFT Code", value: BANK_ACCOUNTS.USD.swiftCode, copy: true },
+                                      { label: "Sort Code", value: BANK_ACCOUNTS.USD.sortCode, copy: false },
+                                    ].map(row => (
+                                      <div key={row.label} className="flex items-center justify-between px-5 py-3">
+                                        <span className="text-[12px] text-amber-700/70 font-semibold uppercase tracking-wide">{row.label}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-[14px] font-bold text-amber-900">{row.value}</span>
+                                          {row.copy && (
+                                            <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Copied!"); }} className="text-[11px] text-amber-700 font-semibold bg-amber-100 px-2 py-0.5 rounded cursor-pointer border-none hover:bg-amber-200">Copy</button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Receipt upload */}
+                              <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden">
+                                <div className="bg-nasmed-green/8 px-5 py-3 flex items-center gap-2 border-b border-nasmed-green/20">
+                                  <span className="text-[16px]">📄</span>
+                                  <span className="font-bold text-[14px] text-nasmed-navy">Upload Transfer Receipt <span className="text-red-500 text-[12px]">*</span></span>
+                                </div>
+                                <div className="p-5">
+                                  <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${bankReceiptUploading ? "border-nasmed-mid-blue" : "border-nasmed-gray-light hover:border-nasmed-green"}`}>
+                                    <span className="text-2xl">{bankReceiptUploading ? "⏳" : "📎"}</span>
+                                    <div className="flex-1">
+                                      <p className="text-[13px] font-semibold text-nasmed-navy">{bankReceiptUploading ? "Uploading…" : "Upload your bank transfer receipt"}</p>
+                                      <p className="text-[11px] text-nasmed-text-muted">PDF, JPG, or PNG — required to proceed</p>
+                                    </div>
+                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={bankReceiptUploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleBankReceiptUpload(f); }} />
+                                  </label>
+                                  {bankReceiptError && <p className="text-[11px] text-red-600 mt-2">{bankReceiptError}</p>}
+                                  <p className="text-[11px] text-nasmed-text-muted mt-3 leading-relaxed">Your membership will be activated within 3–5 business days after admin verifies your payment.</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
                     </div>
                   )}
 
@@ -952,13 +1064,12 @@ export default function MembershipPage() {
                     </button>
                   ) : step === 5 ? (
                     <button
-                      onClick={() => {
-                        saveTransaction("BNK-" + Date.now(), "Bank Transfer", "awaiting_confirmation");
-                        setStep(6);
-                      }}
-                      className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                      disabled={!paymentDone && !bankReceiptUrl}
+                      onClick={() => setStep(6)}
+                      title={!paymentDone && !bankReceiptUrl ? "Complete payment or upload transfer receipt to continue" : ""}
+                      className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-nasmed-green-light"
                     >
-                      I've Completed Payment →
+                      {paymentDone ? "Continue →" : bankReceiptUrl ? "Submit for Review →" : "🔒 Complete Payment"}
                     </button>
                   ) : null}
                 </div>
@@ -1068,17 +1179,58 @@ export default function MembershipPage() {
 
                   {/* Bank Transfer */}
                   <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
-                    <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
+                    <div className="bg-gradient-to-r from-nasmed-navy to-nasmed-mid-blue px-5 py-3 flex items-center gap-3">
                       <span className="text-[18px]">🏦</span>
-                      <span className="font-bold text-[14px] text-nasmed-navy">Direct Bank Transfer</span>
+                      <span className="font-bold text-[14px] text-white">Direct Bank Transfer</span>
                     </div>
-                    <div className="p-5 space-y-3">
-                      <div className="bg-nasmed-off-white rounded-lg p-4 border border-nasmed-gray-light">
-                        <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-0.5 rounded-full">Naira Account</span>
-                        <div className="grid grid-cols-3 gap-2 mt-3 text-[13px]">
-                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account Name</p><p className="font-bold text-nasmed-navy">NASMED</p></div>
-                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Account No.</p><p className="font-bold text-nasmed-navy tracking-widest">0227297914</p></div>
-                          <div><p className="text-nasmed-gray text-[11px] font-semibold uppercase tracking-wide mb-0.5">Bank</p><p className="font-bold text-nasmed-navy">Union Bank</p></div>
+                    <div className="p-5 space-y-4">
+                      {/* NGN Account */}
+                      <div className="rounded-lg border border-nasmed-gray-light overflow-hidden">
+                        <div className="bg-nasmed-off-white px-4 py-2 border-b border-nasmed-gray-light">
+                          <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-nasmed-mid-blue/10 text-nasmed-mid-blue px-2.5 py-0.5 rounded-full">Naira Account (NGN)</span>
+                        </div>
+                        <div className="bg-white divide-y divide-nasmed-gray-light">
+                          {[
+                            { label: "Bank", value: BANK_ACCOUNTS.NGN.bankName, copy: false },
+                            { label: "Account Name", value: BANK_ACCOUNTS.NGN.accountName, copy: false },
+                            { label: "Account No.", value: BANK_ACCOUNTS.NGN.accountNumber, copy: true },
+                            { label: "Sort Code", value: BANK_ACCOUNTS.NGN.sortCode, copy: false },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between px-4 py-2.5">
+                              <span className="text-[12px] text-nasmed-text-muted font-semibold uppercase tracking-wide">{row.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[13px] font-bold text-nasmed-navy">{row.value}</span>
+                                {row.copy && (
+                                  <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Copied!"); }} className="text-[11px] text-nasmed-mid-blue font-semibold bg-nasmed-mid-blue/10 px-1.5 py-0.5 rounded cursor-pointer border-none hover:bg-nasmed-mid-blue/20">Copy</button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* USD Account */}
+                      <div className="rounded-lg border border-amber-200 overflow-hidden">
+                        <div className="bg-amber-50 px-4 py-2 border-b border-amber-200">
+                          <span className="text-[11px] font-bold tracking-[1.5px] uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full">Dollar Account (USD)</span>
+                        </div>
+                        <div className="bg-white divide-y divide-nasmed-gray-light">
+                          {[
+                            { label: "Bank", value: BANK_ACCOUNTS.USD.bankName, copy: false },
+                            { label: "Account Name", value: BANK_ACCOUNTS.USD.accountName, copy: false },
+                            { label: "Account No.", value: BANK_ACCOUNTS.USD.accountNumber, copy: true },
+                            { label: "SWIFT Code", value: BANK_ACCOUNTS.USD.swiftCode, copy: true },
+                            { label: "Sort Code", value: BANK_ACCOUNTS.USD.sortCode, copy: false },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between px-4 py-2.5">
+                              <span className="text-[12px] text-amber-700/70 font-semibold uppercase tracking-wide">{row.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[13px] font-bold text-amber-900">{row.value}</span>
+                                {row.copy && (
+                                  <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Copied!"); }} className="text-[11px] text-amber-700 font-semibold bg-amber-100 px-1.5 py-0.5 rounded cursor-pointer border-none hover:bg-amber-200">Copy</button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                       <button
@@ -1088,7 +1240,7 @@ export default function MembershipPage() {
                         }}
                         className="w-full bg-nasmed-navy text-white border-none py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-nasmed-mid-blue transition-all"
                       >
-                        I've Completed Bank Transfer →
+                        I've Transferred — Upload Receipt →
                       </button>
                     </div>
                   </div>

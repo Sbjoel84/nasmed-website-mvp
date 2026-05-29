@@ -13,6 +13,9 @@ export interface Profile {
   role: 'admin' | 'member';
   status: 'active' | 'inactive' | 'suspended';
   joined_date?: string;
+  username?: string;
+  must_change_password?: boolean;
+  member_number?: string;
 }
 
 export const userService = {

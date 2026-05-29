@@ -34,7 +34,7 @@ export const applicationService = {
     return data || [];
   },
 
-  async checkTableExists(): Promise<boolean> {
+  async checkTableExists(): Promise<{ exists: boolean; error?: string }> {
     try {
       const { error } = await supabase
         .from('applications')
@@ -42,19 +42,13 @@ export const applicationService = {
         .limit(1);
 
       if (error) {
-        console.error('Table check error - Details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-        });
-        return false;
+        console.error('Table check error:', error.message, error.code, error.hint);
+        return { exists: false, error: error.message };
       }
-      console.log('✓ Applications table exists');
-      return true;
+      return { exists: true };
     } catch (err) {
       console.error('Table check failed:', err);
-      return false;
+      return { exists: false, error: String(err) };
     }
   },
 
@@ -83,10 +77,13 @@ export const applicationService = {
   async create(application: Omit<Application, 'id' | 'created_at' | 'status' | 'payment_status'>): Promise<Application> {
     console.log('Creating application with data:', application);
 
-    // First check if table exists
-    const tableExists = await this.checkTableExists();
-    if (!tableExists) {
-      throw new Error('Applications table does not exist. Please run the database schema setup.');
+    const tableCheck = await this.checkTableExists();
+    if (!tableCheck.exists) {
+      throw new Error(
+        tableCheck.error
+          ? `Applications table not accessible: ${tableCheck.error}`
+          : 'Applications table does not exist. Please run the database schema setup.'
+      );
     }
 
     // Use explicit column names to avoid schema cache issues
@@ -131,6 +128,15 @@ export const applicationService = {
     const { error } = await supabase
       .from('applications')
       .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async updatePayment(id: string, paymentRef: string, paymentMethod: string): Promise<void> {
+    const { error } = await supabase
+      .from('applications')
+      .update({ payment_ref: paymentRef, payment_method: paymentMethod, payment_status: 'paid' })
       .eq('id', id);
 
     if (error) throw error;
