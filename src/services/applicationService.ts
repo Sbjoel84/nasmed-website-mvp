@@ -75,18 +75,9 @@ export const applicationService = {
   },
 
   async create(application: Omit<Application, 'id' | 'created_at' | 'status' | 'payment_status'>): Promise<Application> {
-    console.log('Creating application with data:', application);
-
-    const tableCheck = await this.checkTableExists();
-    if (!tableCheck.exists) {
-      throw new Error(
-        tableCheck.error
-          ? `Applications table not accessible: ${tableCheck.error}`
-          : 'Applications table does not exist. Please run the database schema setup.'
-      );
-    }
-
-    // Use explicit column names to avoid schema cache issues
+    // Do NOT include status/payment_status in the insert body — rely on column
+    // DEFAULT ('pending') so PostgREST never has to look them up in its schema
+    // cache.  This avoids PGRST204 when the cache is stale after schema changes.
     const { data, error } = await supabase
       .from('applications')
       .insert({
@@ -105,22 +96,14 @@ export const applicationService = {
         referee2_email: application.referee2_email,
         referee2_phone: application.referee2_phone,
         statement: application.statement,
-        status: 'pending',
-        payment_status: 'pending',
       })
-      .select('id, created_at, full_name, email, phone, profession, membership_type, state, qualifications, workplace, referee1_name, referee1_email, referee1_phone, referee2_name, referee2_email, referee2_phone, statement, status, payment_status')
+      .select()
       .single();
 
     if (error) {
-      console.error('❌ Supabase Insert Error:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
+      console.error('❌ applicationService.create error:', JSON.stringify({ code: error.code, message: error.message, details: error.details, hint: error.hint }));
       throw error;
     }
-    console.log('✓ Application created successfully:', data);
     return data;
   },
 

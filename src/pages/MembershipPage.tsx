@@ -89,12 +89,16 @@ export default function MembershipPage() {
   const [paymentDone, setPaymentDone] = useState(false);
   const [cardData, setCardData] = useState({ name: "", number: "", expiry: "", cvv: "" });
   const [cardError, setCardError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank_transfer' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bank_transfer' | 'ussd' | null>(null);
   const [bankReceiptUrl, setBankReceiptUrl] = useState("");
   const [bankReceiptName, setBankReceiptName] = useState("");
   const [bankReceiptUploading, setBankReceiptUploading] = useState(false);
   const [bankReceiptError, setBankReceiptError] = useState("");
   const [bankTxnRef, setBankTxnRef] = useState("");
+  const [bankRefInput, setBankRefInput] = useState("");   // user-entered txn reference for bank transfer
+  const [ussdBank, setUssdBank] = useState("");
+  const [ussdRef, setUssdRef] = useState("");
+  const [ussdSaved, setUssdSaved] = useState(false);
 
   // Simple payment modal state (Additional Contributions)
   const [showSimplePay, setShowSimplePay] = useState(false);
@@ -138,6 +142,10 @@ export default function MembershipPage() {
     setBankReceiptUploading(false);
     setBankReceiptError("");
     setBankTxnRef("");
+    setBankRefInput("");
+    setUssdBank("");
+    setUssdRef("");
+    setUssdSaved(false);
   };
 
   const formatCardNumber = (val: string) => {
@@ -312,22 +320,34 @@ export default function MembershipPage() {
       toast.success("Application submitted! Please complete your payment.");
       setStep(5);
     } catch (err: unknown) {
-      console.error('Application submission error:', err);
-      const raw = err instanceof Error
-        ? err.message
-        : (typeof err === 'object' && err !== null && 'message' in err)
-          ? String((err as Record<string, unknown>).message)
-          : String(err);
-      if (raw.includes('does not exist') || raw.includes('relation') || raw.includes('schema')) {
-        toast.error("Database not configured — please ensure the Supabase schema has been run, or contact support.");
-      } else if (raw.includes('violates row-level security') || raw.includes('permission') || raw.includes('policy')) {
-        toast.error("Database permission error — the applications table RLS policy may be missing. Run the schema SQL again.");
-      } else if (raw.includes('duplicate') || raw.includes('unique') || raw.includes('already exists')) {
-        toast.error("An application with this email already exists. Contact info@nasmed.org if this is a mistake.");
-      } else if (raw.includes('network') || raw.includes('fetch') || raw.includes('Failed to fetch')) {
-        toast.error("Network error — check your internet connection and try again.");
+      // Supabase throws PostgrestError objects — extract code + message
+      const supaErr = err as Record<string, unknown>;
+      const code = typeof supaErr?.code === 'string' ? supaErr.code : '';
+      const msg = typeof supaErr?.message === 'string'
+        ? supaErr.message
+        : err instanceof Error ? err.message : String(err);
+
+      console.error('Application submission error:', { code, msg, raw: err });
+
+      if (code === '42P01' || msg.toLowerCase().includes('relation') || msg.toLowerCase().includes('does not exist')) {
+        // PostgreSQL 42P01 = undefined_table
+        toast.error(
+          'The "applications" table is missing from your Supabase database. Run supabase-complete-setup.sql in your Supabase SQL editor, then try again.',
+          { duration: 10000 }
+        );
+      } else if (code === '42501' || code === 'PGRST301' || msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('permission denied')) {
+        // RLS blocking the insert
+        toast.error(
+          'Database permission denied. The RLS policy on the applications table may be missing. Run supabase-complete-setup.sql again.',
+          { duration: 10000 }
+        );
+      } else if (code === '23505' || msg.toLowerCase().includes('duplicate') || msg.toLowerCase().includes('unique')) {
+        toast.error('An application with this email already exists. Contact info@nasmed.org if this is a mistake.');
+      } else if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('networkerror')) {
+        toast.error('Network error — check your internet connection and try again.');
       } else {
-        toast.error(`Submission failed: ${raw.length > 120 ? raw.slice(0, 120) + '…' : raw}`);
+        // Show the real Supabase error so the user can report it
+        toast.error(`Submission failed (${code || 'ERR'}): ${msg.slice(0, 200)}`, { duration: 10000 });
       }
     } finally {
       setIsSubmitting(false);
@@ -374,7 +394,7 @@ export default function MembershipPage() {
     setBankReceiptError("");
     try {
       const ext = file.name.split(".").pop();
-      const ref = bankTxnRef || `BNK-${currentAppId || Date.now()}`;
+      const ref = bankRefInput.trim() || `BNK-${currentAppId || Date.now()}`;
       setBankTxnRef(ref);
       const fileName = `receipts/member-${ref}.${ext}`;
       const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
@@ -382,8 +402,8 @@ export default function MembershipPage() {
       const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
       setBankReceiptUrl(publicUrl);
       setBankReceiptName(file.name);
-      saveTransaction(ref, "Bank Transfer", "pending");
-      toast.success("Receipt uploaded! Admin will verify and activate your account.");
+      saveTransaction(ref, "Bank Transfer", "awaiting_confirmation");
+      toast.success("Receipt uploaded! Admin will verify and activate your membership.");
     } catch {
       setBankReceiptError("Upload failed. Ensure a 'receipts' storage bucket exists in Supabase, or email your receipt to info@nasmed.org.");
     } finally {
@@ -854,16 +874,23 @@ export default function MembershipPage() {
                       {/* Amount due */}
                       {planPrice && (
                         <div className="bg-nasmed-navy/5 border border-nasmed-navy/15 rounded-xl p-4 flex items-center justify-between">
-                          <span className="text-[13px] text-nasmed-text-muted">Amount due — {formData.category}</span>
-                          <span className="text-[22px] font-bold text-nasmed-navy">{planPrice}</span>
+                          <span className="text-[13px] text-nasmed-text-muted font-medium">Amount due — {formData.category}</span>
+                          <span className="text-[24px] font-bold text-nasmed-navy">{planPrice}</span>
                         </div>
                       )}
 
+                      {/* Required payment notice */}
+                      <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                        <span className="text-lg shrink-0">🔒</span>
+                        <p className="text-[12px] text-red-700 font-semibold leading-relaxed">Payment is required to complete registration. Your application will not be submitted without a confirmed payment or uploaded proof of payment.</p>
+                      </div>
+
+                      {/* Success banners */}
                       {paymentDone && (
                         <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
                           <span className="text-2xl">✅</span>
                           <div>
-                            <p className="text-[14px] font-bold text-nasmed-green">Card Payment Successful!</p>
+                            <p className="text-[14px] font-bold text-nasmed-green">Online Payment Successful!</p>
                             <p className="text-[12px] text-nasmed-green/80">Click Continue below to complete your registration.</p>
                           </div>
                         </div>
@@ -872,21 +899,31 @@ export default function MembershipPage() {
                         <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
                           <span className="text-2xl">📄</span>
                           <div>
-                            <p className="text-[14px] font-bold text-nasmed-green">Receipt Uploaded Successfully!</p>
-                            <p className="text-[12px] text-nasmed-green/80">Admin will verify your transfer and activate your account. Click Continue.</p>
+                            <p className="text-[14px] font-bold text-nasmed-green">Receipt Uploaded — {bankReceiptName}</p>
+                            <p className="text-[12px] text-nasmed-green/80">Ref: {bankTxnRef || bankRefInput} · Admin will verify and activate your membership.</p>
+                          </div>
+                        </div>
+                      )}
+                      {ussdSaved && (
+                        <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
+                          <span className="text-2xl">📱</span>
+                          <div>
+                            <p className="text-[14px] font-bold text-nasmed-green">USSD Payment Recorded!</p>
+                            <p className="text-[12px] text-nasmed-green/80">Ref: {ussdRef} · Admin will verify and activate your membership.</p>
                           </div>
                         </div>
                       )}
 
-                      {!paymentDone && !bankReceiptUrl && (
+                      {!paymentDone && !bankReceiptUrl && !ussdSaved && (
                         <>
                           {/* Payment method selector */}
                           <div>
-                            <p className="text-[13px] font-semibold text-nasmed-navy mb-3">Select Payment Method</p>
-                            <div className="grid grid-cols-2 gap-3">
+                            <p className="text-[13px] font-bold text-nasmed-navy mb-3">Choose Payment Method <span className="text-red-500">*</span></p>
+                            <div className="grid grid-cols-3 gap-3">
                               {[
-                                { method: 'card' as const, icon: '💳', label: 'Card Payment', desc: 'Instant — Visa, Mastercard, Verve' },
-                                { method: 'bank_transfer' as const, icon: '🏦', label: 'Bank Transfer', desc: 'Transfer funds & upload receipt' },
+                                { method: 'paystack' as const, icon: '💳', label: 'Pay Online', desc: 'Card · Bank · Transfer' },
+                                { method: 'bank_transfer' as const, icon: '🏦', label: 'Bank Transfer', desc: 'Upload receipt + ref' },
+                                { method: 'ussd' as const, icon: '📱', label: 'USSD', desc: 'Dial shortcode & enter ref' },
                               ].map(opt => (
                                 <button
                                   key={opt.method}
@@ -895,20 +932,20 @@ export default function MembershipPage() {
                                   className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-transparent ${paymentMethod === opt.method ? 'border-nasmed-mid-blue bg-nasmed-mid-blue/5 shadow-sm' : 'border-nasmed-gray-light hover:border-nasmed-mid-blue/50'}`}
                                 >
                                   <div className="text-2xl mb-1.5">{opt.icon}</div>
-                                  <div className="font-bold text-[14px] text-nasmed-navy">{opt.label}</div>
-                                  <div className="text-[12px] text-nasmed-text-muted mt-0.5">{opt.desc}</div>
+                                  <div className="font-bold text-[13px] text-nasmed-navy">{opt.label}</div>
+                                  <div className="text-[11px] text-nasmed-text-muted mt-0.5">{opt.desc}</div>
                                 </button>
                               ))}
                             </div>
                           </div>
 
-                          {/* Card payment form */}
-                          {paymentMethod === 'card' && (
+                          {/* ── Paystack (Online Card/Bank) ── */}
+                          {paymentMethod === 'paystack' && (
                             <div className="border-2 border-[#0BA4DB] rounded-2xl overflow-hidden">
                               <div className="bg-gradient-to-r from-[#0BA4DB] to-[#0781b0] px-5 py-3.5 flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
                                   <span className="text-[20px]">💳</span>
-                                  <span className="font-bold text-[14px] text-white">Secure Card Payment</span>
+                                  <span className="font-bold text-[14px] text-white">Secure Online Payment via Paystack</span>
                                 </div>
                                 <div className="flex gap-1.5">
                                   <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">VISA</div>
@@ -917,12 +954,14 @@ export default function MembershipPage() {
                                 </div>
                               </div>
                               <div className="p-6 flex flex-col gap-4 bg-white">
+                                <p className="text-[13px] text-nasmed-text-muted leading-relaxed">Paystack securely handles your payment. You can pay with <strong>debit/credit card</strong>, <strong>bank transfer</strong>, or <strong>USSD</strong> through the Paystack checkout.</p>
+
                                 <div className="flex flex-col gap-1.5">
-                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Cardholder Name <span className="text-red-500">*</span></label>
-                                  <input type="text" value={cardData.name} onChange={e => setCardData(p => ({ ...p, name: e.target.value }))} placeholder="Full name as on card" className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] outline-none focus:border-[#0BA4DB] transition-colors" />
+                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Cardholder / Account Name <span className="text-red-500">*</span></label>
+                                  <input type="text" value={cardData.name} onChange={e => setCardData(p => ({ ...p, name: e.target.value }))} placeholder="Your full name" className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] outline-none focus:border-[#0BA4DB] transition-colors" />
                                 </div>
                                 <div className="flex flex-col gap-1.5">
-                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Card Number <span className="text-red-500">*</span></label>
+                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Card Number (optional — for reference)</label>
                                   <div className="relative">
                                     <input type="text" inputMode="numeric" value={cardData.number} onChange={e => setCardData(p => ({ ...p, number: formatCardNumber(e.target.value) }))} placeholder="0000  0000  0000  0000" maxLength={19} className="w-full py-3 px-4 pr-12 border-2 border-nasmed-gray-light rounded-lg text-[15px] font-mono tracking-widest outline-none focus:border-[#0BA4DB] transition-colors" />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[18px] opacity-40">💳</span>
@@ -930,11 +969,11 @@ export default function MembershipPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Expiry Date <span className="text-red-500">*</span></label>
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Expiry Date</label>
                                     <input type="text" inputMode="numeric" value={cardData.expiry} onChange={e => setCardData(p => ({ ...p, expiry: formatExpiry(e.target.value) }))} placeholder="MM / YY" maxLength={5} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
                                   </div>
                                   <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">CVV <span className="text-red-500">*</span></label>
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">CVV</label>
                                     <input type="password" inputMode="numeric" value={cardData.cvv} onChange={e => setCardData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="•••" maxLength={4} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
                                   </div>
                                 </div>
@@ -945,22 +984,23 @@ export default function MembershipPage() {
                                 )}
                                 <div className="flex items-start gap-2 text-[11px] text-nasmed-text-muted bg-nasmed-off-white rounded-lg p-3">
                                   <span className="shrink-0">🔒</span>
-                                  <span>Your card details are processed securely by Paystack. NASMED does not store your card information. You will be charged <strong>{planPrice}</strong> immediately upon submission.</span>
+                                  <span>Your payment is processed securely by Paystack. NASMED does not store card information. You will be charged <strong>{planPrice}</strong> upon clicking Pay Now.</span>
                                 </div>
-                                <button type="button" onClick={handleCardPay} className="w-full bg-[#0BA4DB] hover:bg-[#0781b0] active:bg-[#0669a0] text-white font-bold text-[15px] py-4 rounded-xl transition-colors border-none cursor-pointer flex items-center justify-center gap-2 shadow-md">
+                                <button type="button" onClick={handleCardPay} className="w-full bg-[#0BA4DB] hover:bg-[#0781b0] text-white font-bold text-[15px] py-4 rounded-xl transition-colors border-none cursor-pointer flex items-center justify-center gap-2 shadow-md">
                                   🔒 Pay {planPrice} Now →
                                 </button>
                               </div>
                             </div>
                           )}
 
-                          {/* Bank transfer section */}
+                          {/* ── Bank Transfer ── */}
                           {paymentMethod === 'bank_transfer' && (
                             <div className="space-y-4">
                               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-[12px] text-amber-800 leading-relaxed">
-                                <strong>How it works:</strong> Transfer the exact amount to the account below, upload your proof of payment, and admin will verify and activate your membership within 3–5 business days.
+                                <strong>How it works:</strong> Transfer the exact amount shown above to the account below. Then enter your transaction reference and upload your receipt. Admin will verify within 3–5 business days.
                               </div>
 
+                              {/* Bank account details */}
                               {formData.category !== "International Membership" ? (
                                 <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
                                   <div className="bg-gradient-to-r from-nasmed-navy to-nasmed-mid-blue px-5 py-3 flex items-center justify-between">
@@ -982,7 +1022,7 @@ export default function MembershipPage() {
                                         <div className="flex items-center gap-2">
                                           <span className="text-[14px] font-bold text-nasmed-navy">{row.value}</span>
                                           {row.copy && (
-                                            <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Account number copied!"); }} className="text-[11px] text-nasmed-mid-blue font-semibold bg-nasmed-mid-blue/10 px-2 py-0.5 rounded cursor-pointer border-none hover:bg-nasmed-mid-blue/20">Copy</button>
+                                            <button type="button" onClick={() => { navigator.clipboard.writeText(row.value); toast.success("Copied!"); }} className="text-[11px] text-nasmed-mid-blue font-semibold bg-nasmed-mid-blue/10 px-2 py-0.5 rounded cursor-pointer border-none hover:bg-nasmed-mid-blue/20">Copy</button>
                                           )}
                                         </div>
                                       </div>
@@ -1020,23 +1060,141 @@ export default function MembershipPage() {
                                 </div>
                               )}
 
-                              {/* Receipt upload */}
-                              <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden">
-                                <div className="bg-nasmed-green/8 px-5 py-3 flex items-center gap-2 border-b border-nasmed-green/20">
-                                  <span className="text-[16px]">📄</span>
-                                  <span className="font-bold text-[14px] text-nasmed-navy">Upload Transfer Receipt <span className="text-red-500 text-[12px]">*</span></span>
+                              {/* User-entered transfer details */}
+                              <div className="border-2 border-nasmed-green/30 rounded-xl overflow-hidden bg-white">
+                                <div className="bg-nasmed-green/8 px-5 py-3 border-b border-nasmed-green/20">
+                                  <p className="font-bold text-[14px] text-nasmed-navy">Enter Your Transfer Details <span className="text-red-500">*</span></p>
+                                  <p className="text-[11px] text-nasmed-text-muted mt-0.5">Both fields are required before you can proceed.</p>
                                 </div>
-                                <div className="p-5">
-                                  <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${bankReceiptUploading ? "border-nasmed-mid-blue" : "border-nasmed-gray-light hover:border-nasmed-green"}`}>
-                                    <span className="text-2xl">{bankReceiptUploading ? "⏳" : "📎"}</span>
-                                    <div className="flex-1">
-                                      <p className="text-[13px] font-semibold text-nasmed-navy">{bankReceiptUploading ? "Uploading…" : "Upload your bank transfer receipt"}</p>
-                                      <p className="text-[11px] text-nasmed-text-muted">PDF, JPG, or PNG — required to proceed</p>
+                                <div className="p-5 space-y-4">
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Transaction Reference / Narration <span className="text-red-500">*</span></label>
+                                    <input
+                                      type="text"
+                                      value={bankRefInput}
+                                      onChange={e => setBankRefInput(e.target.value)}
+                                      placeholder="e.g. NXP/FBN/2406/123456 or your bank alert reference"
+                                      className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[13px] outline-none focus:border-nasmed-green transition-colors"
+                                    />
+                                    <p className="text-[11px] text-nasmed-text-muted">Copy the reference from your bank alert SMS or receipt.</p>
+                                  </div>
+
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Upload Transfer Receipt <span className="text-red-500">*</span></label>
+                                    {bankReceiptName ? (
+                                      <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/30 rounded-xl p-3.5">
+                                        <span className="text-xl">{bankReceiptName.endsWith(".pdf") ? "📋" : "🖼️"}</span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-[13px] font-semibold text-nasmed-navy truncate">{bankReceiptName}</p>
+                                          <p className="text-[11px] text-nasmed-green font-semibold">✓ Receipt uploaded</p>
+                                        </div>
+                                        <label className="text-[11px] text-nasmed-mid-blue font-semibold bg-nasmed-mid-blue/10 px-2.5 py-1 rounded cursor-pointer hover:bg-nasmed-mid-blue/20">
+                                          Change
+                                          <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={bankReceiptUploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleBankReceiptUpload(f); }} />
+                                        </label>
+                                      </div>
+                                    ) : (
+                                      <label className={`flex items-center gap-3 p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${bankReceiptUploading ? "border-nasmed-mid-blue bg-nasmed-mid-blue/5" : !bankRefInput.trim() ? "border-nasmed-gray-light opacity-60 cursor-not-allowed" : "border-nasmed-gray-light hover:border-nasmed-green"}`}>
+                                        <span className="text-2xl">{bankReceiptUploading ? "⏳" : "📎"}</span>
+                                        <div className="flex-1">
+                                          <p className="text-[13px] font-semibold text-nasmed-navy">
+                                            {bankReceiptUploading ? "Uploading…" : !bankRefInput.trim() ? "Enter transaction reference above first" : "Click to upload your transfer receipt"}
+                                          </p>
+                                          <p className="text-[11px] text-nasmed-text-muted">PDF, JPG, or PNG — screenshots accepted</p>
+                                        </div>
+                                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={bankReceiptUploading || !bankRefInput.trim()} onChange={e => { const f = e.target.files?.[0]; if (f) handleBankReceiptUpload(f); }} />
+                                      </label>
+                                    )}
+                                    {bankReceiptError && <p className="text-[11px] text-red-600 mt-1">{bankReceiptError}</p>}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ── USSD ── */}
+                          {paymentMethod === 'ussd' && (
+                            <div className="space-y-4">
+                              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3.5 text-[12px] text-purple-800 leading-relaxed">
+                                <strong>How it works:</strong> Dial your bank's USSD code below, complete the transfer to our account, then enter your transaction reference or confirmation code here.
+                              </div>
+
+                              {/* USSD codes table */}
+                              <div className="border-2 border-purple-200 rounded-xl overflow-hidden">
+                                <div className="bg-gradient-to-r from-purple-700 to-purple-500 px-5 py-3">
+                                  <p className="font-bold text-[14px] text-white">📱 USSD Codes for Nigerian Banks</p>
+                                </div>
+                                <div className="bg-white divide-y divide-nasmed-gray-light">
+                                  {[
+                                    { bank: "GTBank", code: "*737#", note: "Send Money → Other Banks" },
+                                    { bank: "Zenith Bank", code: "*966#", note: "Transfer to Other Banks" },
+                                    { bank: "Access Bank", code: "*901#", note: "Transfer to Other Banks" },
+                                    { bank: "UBA", code: "*919#", note: "Fund Transfer" },
+                                    { bank: "First Bank", code: "*894#", note: "Pay Bills → Transfers" },
+                                    { bank: "Stanbic IBTC", code: "*909#", note: "Payments & Transfers" },
+                                    { bank: "Sterling Bank", code: "*822#", note: "Transfer" },
+                                    { bank: "Union Bank", code: "*826#", note: "Transfer Funds" },
+                                  ].map(b => (
+                                    <div key={b.bank} className="flex items-center justify-between px-5 py-2.5">
+                                      <span className="text-[13px] font-semibold text-nasmed-navy min-w-[120px]">{b.bank}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-bold text-[15px] text-purple-700">{b.code}</span>
+                                        <button type="button" onClick={() => { navigator.clipboard.writeText(b.code); toast.success(`${b.bank} USSD code copied!`); }} className="text-[10px] text-purple-700 font-semibold bg-purple-100 px-1.5 py-0.5 rounded cursor-pointer border-none hover:bg-purple-200">Copy</button>
+                                      </div>
+                                      <span className="text-[11px] text-nasmed-text-muted hidden sm:block">{b.note}</span>
                                     </div>
-                                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" disabled={bankReceiptUploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleBankReceiptUpload(f); }} />
-                                  </label>
-                                  {bankReceiptError && <p className="text-[11px] text-red-600 mt-2">{bankReceiptError}</p>}
-                                  <p className="text-[11px] text-nasmed-text-muted mt-3 leading-relaxed">Your membership will be activated within 3–5 business days after admin verifies your payment.</p>
+                                  ))}
+                                </div>
+                                <div className="px-5 py-3 bg-amber-50 border-t border-amber-200">
+                                  <p className="text-[11px] text-amber-800"><strong>Transfer to:</strong> {BANK_ACCOUNTS.NGN.accountNumber} ({BANK_ACCOUNTS.NGN.bankName}) — {BANK_ACCOUNTS.NGN.accountName} · Amount: <strong>{planPrice}</strong></p>
+                                </div>
+                              </div>
+
+                              {/* USSD details entry */}
+                              <div className="border-2 border-purple-300 rounded-xl overflow-hidden bg-white">
+                                <div className="bg-purple-50 px-5 py-3 border-b border-purple-200">
+                                  <p className="font-bold text-[14px] text-nasmed-navy">Confirm Your USSD Payment <span className="text-red-500">*</span></p>
+                                  <p className="text-[11px] text-nasmed-text-muted mt-0.5">Enter the details from your USSD completion message.</p>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Your Bank <span className="text-red-500">*</span></label>
+                                    <select
+                                      title="Your Bank"
+                                      value={ussdBank}
+                                      onChange={e => setUssdBank(e.target.value)}
+                                      className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[13px] outline-none focus:border-purple-500 transition-colors"
+                                    >
+                                      <option value="">— Select your bank —</option>
+                                      {["GTBank", "Zenith Bank", "Access Bank", "UBA", "First Bank", "Stanbic IBTC", "Sterling Bank", "Union Bank", "Other"].map(b => (
+                                        <option key={b}>{b}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="flex flex-col gap-1.5">
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Transaction Reference / Confirmation Code <span className="text-red-500">*</span></label>
+                                    <input
+                                      type="text"
+                                      value={ussdRef}
+                                      onChange={e => setUssdRef(e.target.value)}
+                                      placeholder="e.g. 000012345678 or reference from SMS"
+                                      className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[13px] outline-none focus:border-purple-500 transition-colors font-mono"
+                                    />
+                                    <p className="text-[11px] text-nasmed-text-muted">Found in the USSD completion message or bank SMS alert.</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={!ussdBank || !ussdRef.trim()}
+                                    onClick={() => {
+                                      const ref = `USSD-${ussdRef.trim()}`;
+                                      saveTransaction(ref, `USSD (${ussdBank})`, "awaiting_confirmation");
+                                      setUssdSaved(true);
+                                      toast.success("USSD payment recorded! Admin will verify and activate your membership.");
+                                    }}
+                                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3.5 rounded-xl transition-colors border-none cursor-pointer"
+                                  >
+                                    📱 Confirm USSD Payment →
+                                  </button>
                                 </div>
                               </div>
                             </div>
@@ -1064,12 +1222,13 @@ export default function MembershipPage() {
                     </button>
                   ) : step === 5 ? (
                     <button
-                      disabled={!paymentDone && !bankReceiptUrl}
+                      type="button"
+                      disabled={!paymentDone && !(paymentMethod === 'bank_transfer' && !!bankRefInput.trim() && !!bankReceiptUrl) && !ussdSaved}
                       onClick={() => setStep(6)}
-                      title={!paymentDone && !bankReceiptUrl ? "Complete payment or upload transfer receipt to continue" : ""}
+                      title={(!paymentDone && !(paymentMethod === 'bank_transfer' && !!bankRefInput.trim() && !!bankReceiptUrl) && !ussdSaved) ? "Complete payment to proceed" : ""}
                       className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-nasmed-green-light"
                     >
-                      {paymentDone ? "Continue →" : bankReceiptUrl ? "Submit for Review →" : "🔒 Complete Payment"}
+                      {paymentDone ? "Continue →" : (paymentMethod === 'bank_transfer' && bankRefInput.trim() && bankReceiptUrl) || ussdSaved ? "Submit for Review →" : "🔒 Complete Payment First"}
                     </button>
                   ) : null}
                 </div>

@@ -8,6 +8,8 @@ import hero5 from "@/assets/hero-5.jpg";
 import swearingIn from "@/assets/swearing-in.jpg";
 import cacHandover from "@/assets/cac-handover.jpg";
 import aboutImg from "@/assets/cac-handover.jpg";
+import supabase from "@/lib/supabaseClient";
+import newsService, { NewsPost } from "@/services/newsService";
 
 const heroSlides = [
   { image: hero1, title: "Advancing <em>Sports Medicine</em> Across Nigeria", sub: "The premier professional body uniting physicians, physiotherapists, scientists and allied health professionals dedicated to sports and exercise medicine excellence." },
@@ -19,21 +21,18 @@ const heroSlides = [
   { image: cacHandover, title: "<em>Official Recognition</em> & Incorporation", sub: "NASMED's CAC certificate handover — a milestone in the Association's journey as a registered professional body in Nigeria." },
 ];
 
-const stats = [
-  { num: "1,400+", label: "Active Members" },
-  { num: "36", label: "States Covered" },
-  { num: "35+", label: "Years of Excellence" },
-  { num: "200+", label: "Events Held" },
-];
-
-const news = [
-  { cat: "CONFERENCE", title: "NASMED Annual Conference 2025 — Registration Now Open", desc: "Join leading sports medicine practitioners for three days of cutting-edge research presentations, workshops, and networking.", date: "Jul 2024", read: "5 min read" },
-  { cat: "RESEARCH", title: "New Research Grants Available for Early-Career Professionals", desc: "NASMED announces ₦5M in research funding for innovative sports medicine studies.", date: "Jun 2024", read: "3 min read" },
-  { cat: "UPDATE", title: "Updated Concussion Management Guidelines Released", desc: "New evidence-based protocols for sideline concussion assessment in Nigerian sports.", date: "May 2024", read: "4 min read" },
-];
+const categoryIcon: Record<string, string> = {
+  conference: "🏛️",
+  research: "🔬",
+  update: "📋",
+  governance: "📋",
+  milestones: "🏆",
+};
 
 export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [liveNews, setLiveNews] = useState<NewsPost[]>([]);
 
   const nextSlide = useCallback(() => {
     setActiveSlide((prev) => (prev + 1) % heroSlides.length);
@@ -43,6 +42,27 @@ export default function HomePage() {
     const timer = setInterval(nextSlide, 6000);
     return () => clearInterval(timer);
   }, [nextSlide]);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "member")
+      .eq("status", "active")
+      .then(({ count }) => { if (count !== null) setMemberCount(count); })
+      .catch(() => {});
+
+    newsService.getAllPosts()
+      .then(posts => setLiveNews(posts.slice(0, 3)))
+      .catch(() => {});
+  }, []);
+
+  const stats = [
+    { num: memberCount !== null ? `${memberCount.toLocaleString()}+` : "1,400+", label: "Active Members" },
+    { num: "36", label: "States Covered" },
+    { num: "35+", label: "Years of Excellence" },
+    { num: "200+", label: "Events Held" },
+  ];
 
   return (
     <div>
@@ -91,6 +111,8 @@ export default function HomePage() {
           {heroSlides.map((_, i) => (
             <button
               key={i}
+              type="button"
+              title={`Go to slide ${i + 1}`}
               onClick={() => setActiveSlide(i)}
               className={`h-[3px] rounded transition-all cursor-pointer border-none ${i === activeSlide ? "w-12 bg-nasmed-green-light" : "w-7 bg-white/30"}`}
             />
@@ -155,21 +177,38 @@ export default function HomePage() {
         <div className="section-label">Latest News</div>
         <h2 className="section-title">Stay Updated</h2>
         <p className="section-sub">The latest from NASMED — conferences, research, policy updates and professional development opportunities.</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {news.map((n, i) => (
-            <div key={i} className="rounded-xl overflow-hidden border border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1">
-              <div className="w-full aspect-video bg-gradient-to-br from-nasmed-navy to-nasmed-blue flex items-center justify-center text-white/30 text-5xl">📰</div>
-              <div className="p-4">
-                <div className="text-[11px] font-bold tracking-[1.5px] uppercase text-nasmed-green mb-2">{n.cat}</div>
-                <h3 className="font-heading text-base font-bold text-nasmed-navy leading-snug mb-2">{n.title}</h3>
-                <p className="text-[13px] text-nasmed-text-muted leading-relaxed">{n.desc}</p>
+
+        {liveNews.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="rounded-xl border border-nasmed-gray-light bg-white h-52 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {liveNews.map(n => (
+              <div key={n.id} className="rounded-xl overflow-hidden border border-nasmed-gray-light bg-white transition-all hover:shadow-xl hover:-translate-y-1">
+                {n.image_url ? (
+                  <div className="w-full aspect-video overflow-hidden">
+                    <img src={n.image_url} alt={n.title} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-full aspect-video bg-gradient-to-br from-nasmed-navy to-nasmed-blue flex items-center justify-center text-white/30 text-5xl">
+                    {categoryIcon[n.category] || "📰"}
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="text-[11px] font-bold tracking-[1.5px] uppercase text-nasmed-green mb-2">{n.category_label}</div>
+                  <h3 className="font-heading text-base font-bold text-nasmed-navy leading-snug mb-2">{n.title}</h3>
+                  <p className="text-[13px] text-nasmed-text-muted leading-relaxed">{n.description}</p>
+                </div>
+                <div className="px-4 py-3 border-t border-nasmed-gray-light flex justify-between text-xs text-nasmed-gray">
+                  <span>{n.date_label}</span><span>{n.read_time}</span>
+                </div>
               </div>
-              <div className="px-4 py-3 border-t border-nasmed-gray-light flex justify-between text-xs text-nasmed-gray">
-                <span>{n.date}</span><span>{n.read}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* DELIVERY / CTA */}

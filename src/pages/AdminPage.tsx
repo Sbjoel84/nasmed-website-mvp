@@ -13,6 +13,7 @@ import applicationService, { Application } from "@/services/applicationService";
 import userService from "@/services/userService";
 import publicationService from "@/services/publicationService";
 import transactionService from "@/services/transactionService";
+import newsService, { NewsPost, NewsEvent } from "@/services/newsService";
 
 // ── DEMO_MEMBERS_INIT kept ONLY for the "Initialize All Accounts" one-time seeding tool ──
 const DEMO_MEMBERS_INIT = [
@@ -216,6 +217,15 @@ export default function AdminPage() {
     };
   });
 
+  const confirmedNGN = transactions
+    .filter(t => t.status === "confirmed" && t.currency === "NGN")
+    .reduce((sum, t) => sum + (parseFloat((t.amount || "0").replace(/[^0-9.]/g, "")) || 0), 0);
+  const revenueLabel = confirmedNGN >= 1_000_000
+    ? `₦${(confirmedNGN / 1_000_000).toFixed(1)}M confirmed`
+    : confirmedNGN > 0
+    ? `₦${confirmedNGN.toLocaleString()} confirmed`
+    : "No confirmed payments yet";
+
   const [viewApp, setViewApp] = useState<DisplayApp | null>(null);
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
@@ -232,6 +242,22 @@ export default function AdminPage() {
   const [pubFile, setPubFile] = useState<File | null>(null);
   const [editMember, setEditMember] = useState<DisplayMember | null>(null);
   const [txnTypeFilter, setTxnTypeFilter] = useState<"all" | "membership" | "contribution">("all");
+
+  // News & Events state
+  const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
+  const [newsEvents, setNewsEvents] = useState<NewsEvent[]>([]);
+  const [npTitle, setNpTitle] = useState("");
+  const [npDesc, setNpDesc] = useState("");
+  const [npCat, setNpCat] = useState("update");
+  const [npCatLabel, setNpCatLabel] = useState("UPDATE");
+  const [npDateLabel, setNpDateLabel] = useState("");
+  const [npReadTime, setNpReadTime] = useState("3 min read");
+  const [evTitle, setEvTitle] = useState("");
+  const [evDesc, setEvDesc] = useState("");
+  const [evLocation, setEvLocation] = useState("");
+  const [evDate, setEvDate] = useState("");
+  const [evCtaText, setEvCtaText] = useState("Register");
+  const [evCtaStyle, setEvCtaStyle] = useState<"filled" | "outline">("filled");
 
   const canAccess = localAuth || (!loading && isAdmin);
 
@@ -284,6 +310,8 @@ export default function AdminPage() {
       userService.getAll().then(data => setMembers(data.filter(p => p.role === "member").map(toDisplayMember))).catch(() => {});
       publicationService.getAll().then(data => setPublications(data.map(d => toDisplayPub(d as unknown as Record<string, unknown>)))).catch(() => {});
       transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
+      newsService.getAllPostsAdmin().then(data => setNewsPosts(data)).catch(() => {});
+      newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
     };
 
     loadAll();
@@ -300,12 +328,20 @@ export default function AdminPage() {
     const txnSub = transactionService.subscribeToChanges(() => {
       transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
     });
+    const newsSub = newsService.subscribeToPostChanges(() => {
+      newsService.getAllPostsAdmin().then(data => setNewsPosts(data)).catch(() => {});
+    });
+    const eventSub = newsService.subscribeToEventChanges(() => {
+      newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
+    });
 
     return () => {
       supabase.removeChannel(appSub);
       supabase.removeChannel(memberSub);
       supabase.removeChannel(pubSub);
       supabase.removeChannel(txnSub);
+      supabase.removeChannel(newsSub);
+      supabase.removeChannel(eventSub);
     };
   }, [canAccess]);
 
@@ -566,6 +602,7 @@ export default function AdminPage() {
     { key: "applications", icon: "📋", label: "Applications" },
     { key: "members", icon: "👥", label: "Members" },
     { key: "publications", icon: "📚", label: "Publications" },
+    { key: "news", icon: "📰", label: "News & Events" },
     { key: "subscriptions", icon: "💳", label: "Subscriptions" },
     { key: "transactions", icon: "💰", label: "Transactions" },
     { key: "credentials", icon: "🔑", label: "Credentials" },
@@ -626,7 +663,7 @@ export default function AdminPage() {
                   { num: members.length.toLocaleString(), label: "Total Members", trend: `${members.length} registered`, color: "border-nasmed-mid-blue" },
                   { num: String(pendingCount), label: "Pending Applications", trend: "Needs Review", color: "border-nasmed-green", trendColor: "text-amber-500" },
                   { num: String(approvedCount), label: "Approved This Month", trend: "↑ New Members", color: "border-amber-500" },
-                  { num: String(subscriptions.filter(s => s.status === "active").length), label: "Active Subscriptions", trend: "Revenue: ₦1.2M", color: "border-nasmed-green", trendColor: "text-nasmed-green" },
+                  { num: String(subscriptions.filter(s => s.status === "active").length), label: "Active Subscriptions", trend: revenueLabel, color: "border-nasmed-green", trendColor: "text-nasmed-green" },
                 ].map((c, i) => (
                   <div key={i} className={`bg-white rounded-xl p-6 shadow-sm border-t-4 ${c.color}`}>
                     <div className="font-heading text-[32px] font-bold text-nasmed-navy leading-none">{c.num}</div>
@@ -882,6 +919,211 @@ export default function AdminPage() {
                     <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No publications yet.</div>
                   )}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* ── News & Events ── */}
+          {activeSection === "news" && (
+            <>
+              <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">News & Events</h2>
+              <p className="text-nasmed-text-muted text-sm mb-7">Manage all news posts and upcoming events shown on the public website.</p>
+
+              {/* Create News Post */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">Create News Post</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Title <span className="text-red-600">*</span></label>
+                    <input type="text" value={npTitle} onChange={e => setNpTitle(e.target.value)} placeholder="Post title" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Description</label>
+                    <textarea value={npDesc} onChange={e => setNpDesc(e.target.value)} placeholder="Short description or summary..." className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue min-h-[80px]" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Category</label>
+                    <select title="Category" value={npCat} onChange={e => { setNpCat(e.target.value); setNpCatLabel(e.target.value.toUpperCase()); }} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue">
+                      <option value="conference">Conference</option>
+                      <option value="research">Research</option>
+                      <option value="update">Update</option>
+                      <option value="governance">Governance</option>
+                      <option value="milestones">Milestones</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Category Label (display)</label>
+                    <input type="text" value={npCatLabel} onChange={e => setNpCatLabel(e.target.value)} placeholder="e.g. ANNUAL CONFERENCE" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Date Label</label>
+                    <input type="text" value={npDateLabel} onChange={e => setNpDateLabel(e.target.value)} placeholder="e.g. Jul 2024" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Read Time</label>
+                    <input type="text" value={npReadTime} onChange={e => setNpReadTime(e.target.value)} placeholder="e.g. 3 min read" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!npTitle.trim()) { toast.error("Title is required."); return; }
+                    try {
+                      const post = await newsService.createPost({ title: npTitle, description: npDesc, category: npCat, category_label: npCatLabel, date_label: npDateLabel, read_time: npReadTime, published: true });
+                      setNewsPosts(prev => [post, ...prev]);
+                      setNpTitle(""); setNpDesc(""); setNpCat("update"); setNpCatLabel("UPDATE"); setNpDateLabel(""); setNpReadTime("3 min read");
+                      toast.success("News post published!");
+                    } catch { toast.error("Failed to create post."); }
+                  }}
+                  className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-5"
+                >Publish Post →</button>
+              </div>
+
+              {/* Existing News Posts */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">All News Posts ({newsPosts.length})</h3>
+                {newsPosts.length === 0 ? (
+                  <div className="text-center py-8 text-nasmed-text-muted text-[13px]">No news posts yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead><tr>{["Title", "Category", "Date", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                      <tbody>
+                        {newsPosts.map(p => (
+                          <tr key={p.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/30 last:border-0">
+                            <td className="py-3 px-3 text-[13px] font-semibold max-w-[260px] truncate">{p.title}</td>
+                            <td className="py-3 px-3"><span className="py-1 px-2 rounded-full text-[11px] font-bold bg-nasmed-mid-blue/10 text-nasmed-mid-blue">{p.category_label}</span></td>
+                            <td className="py-3 px-3 text-[13px] text-nasmed-text-muted">{p.date_label || "—"}</td>
+                            <td className="py-3 px-3">{statusBadge(p.published ? "published" : "draft")}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await newsService.updatePost(p.id, { published: !p.published });
+                                    setNewsPosts(prev => prev.map(x => x.id === p.id ? { ...x, published: !x.published } : x));
+                                  }}
+                                  className={`border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80 ${p.published ? "bg-amber-500 text-white" : "bg-nasmed-green text-white"}`}
+                                >{p.published ? "Unpublish" : "Publish"}</button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm("Delete this post?")) return;
+                                    await newsService.deletePost(p.id);
+                                    setNewsPosts(prev => prev.filter(x => x.id !== p.id));
+                                    toast.success("Post deleted.");
+                                  }}
+                                  className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
+                                >🗑</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Create Event */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">Create Event</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Title <span className="text-red-600">*</span></label>
+                    <input type="text" value={evTitle} onChange={e => setEvTitle(e.target.value)} placeholder="Event title" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Description</label>
+                    <input type="text" value={evDesc} onChange={e => setEvDesc(e.target.value)} placeholder="Short description" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Location</label>
+                    <input type="text" value={evLocation} onChange={e => setEvLocation(e.target.value)} placeholder="e.g. Abuja, FCT" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Event Date</label>
+                    <input type="date" value={evDate} onChange={e => setEvDate(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">CTA Button Text</label>
+                    <input type="text" value={evCtaText} onChange={e => setEvCtaText(e.target.value)} placeholder="Register / Book Now / Join Free" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Button Style</label>
+                    <select title="Button Style" value={evCtaStyle} onChange={e => setEvCtaStyle(e.target.value as "filled" | "outline")} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue">
+                      <option value="filled">Filled (Green)</option>
+                      <option value="outline">Outline</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!evTitle.trim()) { toast.error("Title is required."); return; }
+                    const d = evDate ? new Date(evDate) : null;
+                    try {
+                      const ev = await newsService.createEvent({
+                        title: evTitle, description: evDesc, location: evLocation,
+                        event_date: evDate || undefined,
+                        day_label: d ? String(d.getDate()).padStart(2, "0") : "",
+                        month_label: d ? d.toLocaleString("en-US", { month: "short" }).toUpperCase() : "",
+                        cta_text: evCtaText, cta_style: evCtaStyle, published: true,
+                      });
+                      setNewsEvents(prev => [...prev, ev]);
+                      setEvTitle(""); setEvDesc(""); setEvLocation(""); setEvDate(""); setEvCtaText("Register"); setEvCtaStyle("filled");
+                      toast.success("Event created!");
+                    } catch { toast.error("Failed to create event."); }
+                  }}
+                  className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-5"
+                >Add Event →</button>
+              </div>
+
+              {/* Existing Events */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">All Events ({newsEvents.length})</h3>
+                {newsEvents.length === 0 ? (
+                  <div className="text-center py-8 text-nasmed-text-muted text-[13px]">No events yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead><tr>{["Title", "Location", "Date", "CTA", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                      <tbody>
+                        {newsEvents.map(ev => (
+                          <tr key={ev.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/30 last:border-0">
+                            <td className="py-3 px-3 text-[13px] font-semibold max-w-[220px] truncate">{ev.title}</td>
+                            <td className="py-3 px-3 text-[13px]">{ev.location || "—"}</td>
+                            <td className="py-3 px-3 text-[13px] font-mono">{ev.day_label} {ev.month_label}</td>
+                            <td className="py-3 px-3 text-[13px]">{ev.cta_text}</td>
+                            <td className="py-3 px-3">{statusBadge(ev.published ? "published" : "draft")}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await newsService.updateEvent(ev.id, { published: !ev.published });
+                                    setNewsEvents(prev => prev.map(x => x.id === ev.id ? { ...x, published: !x.published } : x));
+                                  }}
+                                  className={`border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80 ${ev.published ? "bg-amber-500 text-white" : "bg-nasmed-green text-white"}`}
+                                >{ev.published ? "Unpublish" : "Publish"}</button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm("Delete this event?")) return;
+                                    await newsService.deleteEvent(ev.id);
+                                    setNewsEvents(prev => prev.filter(x => x.id !== ev.id));
+                                    toast.success("Event deleted.");
+                                  }}
+                                  className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
+                                >🗑</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </>
           )}
