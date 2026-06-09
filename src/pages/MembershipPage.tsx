@@ -6,7 +6,6 @@ import { applicationService } from "@/services/applicationService";
 import transactionService from "@/services/transactionService";
 import authService from "@/lib/authService";
 import supabase from "@/lib/supabaseClient";
-import PaystackPop from "@paystack/inline-js";
 import MembershipCertificate from "@/components/MembershipCertificate";
 import MemberBenefitsSection from "@/components/MemberBenefitsSection";
 
@@ -86,19 +85,13 @@ export default function MembershipPage() {
   const [simpleReceiptError, setSimpleReceiptError] = useState("");
   const [simplePayTxnRef, setSimplePayTxnRef] = useState("");
   const [step, setStep] = useState(1);
-  const [paymentDone, setPaymentDone] = useState(false);
-  const [cardData, setCardData] = useState({ name: "", number: "", expiry: "", cvv: "" });
-  const [cardError, setCardError] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'bank_transfer' | 'ussd' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | null>(null);
   const [bankReceiptUrl, setBankReceiptUrl] = useState("");
   const [bankReceiptName, setBankReceiptName] = useState("");
   const [bankReceiptUploading, setBankReceiptUploading] = useState(false);
   const [bankReceiptError, setBankReceiptError] = useState("");
   const [bankTxnRef, setBankTxnRef] = useState("");
-  const [bankRefInput, setBankRefInput] = useState("");   // user-entered txn reference for bank transfer
-  const [ussdBank, setUssdBank] = useState("");
-  const [ussdRef, setUssdRef] = useState("");
-  const [ussdSaved, setUssdSaved] = useState(false);
+  const [bankRefInput, setBankRefInput] = useState("");
 
   // Simple payment modal state (Additional Contributions)
   const [showSimplePay, setShowSimplePay] = useState(false);
@@ -133,9 +126,6 @@ export default function MembershipPage() {
   const closeForm = () => {
     setShowForm(false);
     setStep(1);
-    setPaymentDone(false);
-    setCardData({ name: "", number: "", expiry: "", cvv: "" });
-    setCardError("");
     setPaymentMethod(null);
     setBankReceiptUrl("");
     setBankReceiptName("");
@@ -143,33 +133,8 @@ export default function MembershipPage() {
     setBankReceiptError("");
     setBankTxnRef("");
     setBankRefInput("");
-    setUssdBank("");
-    setUssdRef("");
-    setUssdSaved(false);
   };
 
-  const formatCardNumber = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 16);
-    return digits.replace(/(.{4})/g, "$1 ").trim();
-  };
-
-  const formatExpiry = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 4);
-    if (digits.length >= 3) return digits.slice(0, 2) + "/" + digits.slice(2);
-    return digits;
-  };
-
-  const handleCardPay = () => {
-    const rawNumber = cardData.number.replace(/\s/g, "");
-    if (!cardData.name.trim()) { setCardError("Please enter the cardholder name."); return; }
-    if (rawNumber.length < 16) { setCardError("Please enter a valid 16-digit card number."); return; }
-    if (!cardData.expiry.match(/^\d{2}\/\d{2}$/)) { setCardError("Please enter expiry date as MM/YY."); return; }
-    const [mm] = cardData.expiry.split("/").map(Number);
-    if (mm < 1 || mm > 12) { setCardError("Expiry month must be between 01 and 12."); return; }
-    if (cardData.cvv.length < 3) { setCardError("Please enter a valid 3 or 4-digit CVV."); return; }
-    setCardError("");
-    handlePaystack();
-  };
 
   const openSimplePay = (item: typeof otherPayments[0]) => {
     setSimplePayItem(item);
@@ -237,26 +202,6 @@ export default function MembershipPage() {
     } finally {
       setSimpleReceiptUploading(false);
     }
-  };
-
-  const handleSimplePaystack = () => {
-    const amountKobo = Math.round(Number(simplePayData.amount.replace(/,/g, "")) * 100);
-    if (!amountKobo || amountKobo <= 0) { toast.error("Invalid amount."); return; }
-    const popup = new PaystackPop();
-    popup.newTransaction({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
-      email: simplePayData.email,
-      amount: amountKobo,
-      currency: "NGN",
-      metadata: { full_name: simplePayData.name, payment_type: simplePayItem?.label },
-      onSuccess: (transaction: Record<string, unknown>) => {
-        const ref = (transaction?.reference as string) || ("PSK-" + Date.now());
-        saveSimpleTransaction(ref, "Paystack", "confirmed");
-        toast.success("Payment successful! Thank you.");
-        setSimplePayStep(3);
-      },
-      onCancel: () => { toast.error("Payment cancelled."); },
-    });
   };
 
   const updateField = (field: string, value: string | boolean) => {
@@ -360,16 +305,6 @@ export default function MembershipPage() {
   ];
   const planPrice = allPlans.find(p => p.tier === formData.category)?.price ?? "";
 
-  const planAmountKobo: Record<string, number> = {
-    "Student Membership": 250000,
-    "Associate Member": 15000000,
-    "Individual Member": 2500000,
-    "Professional Member": 4500000,
-    "Fellow (FNASMED)": 25000000,
-    "International Membership": 5000,   // $50 in USD cents
-    "Annual Dues": 2500000,
-  };
-
   const saveTransaction = (ref: string, method: string, status: string) => {
     transactionService.create({
       payment_ref: ref,
@@ -409,31 +344,6 @@ export default function MembershipPage() {
     } finally {
       setBankReceiptUploading(false);
     }
-  };
-
-  const handlePaystack = () => {
-    const isInternational = formData.category === "International Membership";
-    const amount = planAmountKobo[formData.category];
-    if (!amount) { toast.error("Please select a valid membership plan."); return; }
-
-    const popup = new PaystackPop();
-    popup.newTransaction({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
-      email: formData.email,
-      amount,
-      currency: isInternational ? "USD" : "NGN",
-      metadata: { full_name: formData.fullName, membership_type: formData.category },
-      onSuccess: (transaction: Record<string, unknown>) => {
-        const ref = (transaction?.reference as string) || ("PSK-" + Date.now());
-        saveTransaction(ref, "Paystack", "confirmed");
-        setPaymentDone(true);
-        toast.success("Payment successful! Your membership will be activated shortly.");
-        setStep(6);
-      },
-      onCancel: () => {
-        toast.error("Payment cancelled.");
-      },
-    });
   };
 
   const wordCount = formData.statement.trim().split(/\s+/).filter(w => w).length;
@@ -885,16 +795,7 @@ export default function MembershipPage() {
                         <p className="text-[12px] text-red-700 font-semibold leading-relaxed">Payment is required to complete registration. Your application will not be submitted without a confirmed payment or uploaded proof of payment.</p>
                       </div>
 
-                      {/* Success banners */}
-                      {paymentDone && (
-                        <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
-                          <span className="text-2xl">✅</span>
-                          <div>
-                            <p className="text-[14px] font-bold text-nasmed-green">Online Payment Successful!</p>
-                            <p className="text-[12px] text-nasmed-green/80">Click Continue below to complete your registration.</p>
-                          </div>
-                        </div>
-                      )}
+                      {/* Receipt uploaded success banner */}
                       {bankReceiptUrl && (
                         <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
                           <span className="text-2xl">📄</span>
@@ -904,101 +805,12 @@ export default function MembershipPage() {
                           </div>
                         </div>
                       )}
-                      {ussdSaved && (
-                        <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
-                          <span className="text-2xl">📱</span>
-                          <div>
-                            <p className="text-[14px] font-bold text-nasmed-green">USSD Payment Recorded!</p>
-                            <p className="text-[12px] text-nasmed-green/80">Ref: {ussdRef} · Admin will verify and activate your membership.</p>
+
+                      {!bankReceiptUrl && (
+                        <div className="space-y-4">
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-[12px] text-amber-800 leading-relaxed">
+                            <strong>How it works:</strong> Transfer <strong>{planPrice}</strong> to the account below. Then enter your transaction reference and upload your receipt. Admin will verify within 3–5 business days.
                           </div>
-                        </div>
-                      )}
-
-                      {!paymentDone && !bankReceiptUrl && !ussdSaved && (
-                        <>
-                          {/* Payment method selector */}
-                          <div>
-                            <p className="text-[13px] font-bold text-nasmed-navy mb-3">Choose Payment Method <span className="text-red-500">*</span></p>
-                            <div className="grid grid-cols-3 gap-3">
-                              {[
-                                { method: 'paystack' as const, icon: '💳', label: 'Pay Online', desc: 'Card · Bank · Transfer' },
-                                { method: 'bank_transfer' as const, icon: '🏦', label: 'Bank Transfer', desc: 'Upload receipt + ref' },
-                                { method: 'ussd' as const, icon: '📱', label: 'USSD', desc: 'Dial shortcode & enter ref' },
-                              ].map(opt => (
-                                <button
-                                  key={opt.method}
-                                  type="button"
-                                  onClick={() => setPaymentMethod(opt.method)}
-                                  className={`p-4 rounded-xl border-2 text-left transition-all cursor-pointer bg-transparent ${paymentMethod === opt.method ? 'border-nasmed-mid-blue bg-nasmed-mid-blue/5 shadow-sm' : 'border-nasmed-gray-light hover:border-nasmed-mid-blue/50'}`}
-                                >
-                                  <div className="text-2xl mb-1.5">{opt.icon}</div>
-                                  <div className="font-bold text-[13px] text-nasmed-navy">{opt.label}</div>
-                                  <div className="text-[11px] text-nasmed-text-muted mt-0.5">{opt.desc}</div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* ── Paystack (Online Card/Bank) ── */}
-                          {paymentMethod === 'paystack' && (
-                            <div className="border-2 border-[#0BA4DB] rounded-2xl overflow-hidden">
-                              <div className="bg-gradient-to-r from-[#0BA4DB] to-[#0781b0] px-5 py-3.5 flex items-center justify-between">
-                                <div className="flex items-center gap-2.5">
-                                  <span className="text-[20px]">💳</span>
-                                  <span className="font-bold text-[14px] text-white">Secure Online Payment via Paystack</span>
-                                </div>
-                                <div className="flex gap-1.5">
-                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">VISA</div>
-                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">MC</div>
-                                  <div className="bg-white/20 text-white text-[9px] font-extrabold px-2 py-0.5 rounded tracking-wide">VERVE</div>
-                                </div>
-                              </div>
-                              <div className="p-6 flex flex-col gap-4 bg-white">
-                                <p className="text-[13px] text-nasmed-text-muted leading-relaxed">Paystack securely handles your payment. You can pay with <strong>debit/credit card</strong>, <strong>bank transfer</strong>, or <strong>USSD</strong> through the Paystack checkout.</p>
-
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Cardholder / Account Name <span className="text-red-500">*</span></label>
-                                  <input type="text" value={cardData.name} onChange={e => setCardData(p => ({ ...p, name: e.target.value }))} placeholder="Your full name" className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] outline-none focus:border-[#0BA4DB] transition-colors" />
-                                </div>
-                                <div className="flex flex-col gap-1.5">
-                                  <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Card Number (optional — for reference)</label>
-                                  <div className="relative">
-                                    <input type="text" inputMode="numeric" value={cardData.number} onChange={e => setCardData(p => ({ ...p, number: formatCardNumber(e.target.value) }))} placeholder="0000  0000  0000  0000" maxLength={19} className="w-full py-3 px-4 pr-12 border-2 border-nasmed-gray-light rounded-lg text-[15px] font-mono tracking-widest outline-none focus:border-[#0BA4DB] transition-colors" />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[18px] opacity-40">💳</span>
-                                  </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Expiry Date</label>
-                                    <input type="text" inputMode="numeric" value={cardData.expiry} onChange={e => setCardData(p => ({ ...p, expiry: formatExpiry(e.target.value) }))} placeholder="MM / YY" maxLength={5} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
-                                  </div>
-                                  <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">CVV</label>
-                                    <input type="password" inputMode="numeric" value={cardData.cvv} onChange={e => setCardData(p => ({ ...p, cvv: e.target.value.replace(/\D/g, "").slice(0, 4) }))} placeholder="•••" maxLength={4} className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[14px] font-mono outline-none focus:border-[#0BA4DB] transition-colors text-center" />
-                                  </div>
-                                </div>
-                                {cardError && (
-                                  <div className="flex items-center gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-2.5 text-[13px] text-red-700 font-semibold">
-                                    <span>⚠</span> {cardError}
-                                  </div>
-                                )}
-                                <div className="flex items-start gap-2 text-[11px] text-nasmed-text-muted bg-nasmed-off-white rounded-lg p-3">
-                                  <span className="shrink-0">🔒</span>
-                                  <span>Your payment is processed securely by Paystack. NASMED does not store card information. You will be charged <strong>{planPrice}</strong> upon clicking Pay Now.</span>
-                                </div>
-                                <button type="button" onClick={handleCardPay} className="w-full bg-[#0BA4DB] hover:bg-[#0781b0] text-white font-bold text-[15px] py-4 rounded-xl transition-colors border-none cursor-pointer flex items-center justify-center gap-2 shadow-md">
-                                  🔒 Pay {planPrice} Now →
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* ── Bank Transfer ── */}
-                          {paymentMethod === 'bank_transfer' && (
-                            <div className="space-y-4">
-                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-[12px] text-amber-800 leading-relaxed">
-                                <strong>How it works:</strong> Transfer the exact amount shown above to the account below. Then enter your transaction reference and upload your receipt. Admin will verify within 3–5 business days.
-                              </div>
 
                               {/* Bank account details */}
                               {formData.category !== "International Membership" ? (
@@ -1060,15 +872,15 @@ export default function MembershipPage() {
                                 </div>
                               )}
 
-                              {/* User-entered transfer details */}
+                              {/* Reference + receipt upload */}
                               <div className="border-2 border-nasmed-green/30 rounded-xl overflow-hidden bg-white">
                                 <div className="bg-nasmed-green/8 px-5 py-3 border-b border-nasmed-green/20">
-                                  <p className="font-bold text-[14px] text-nasmed-navy">Enter Your Transfer Details <span className="text-red-500">*</span></p>
+                                  <p className="font-bold text-[14px] text-nasmed-navy">Enter Payment Details <span className="text-red-500">*</span></p>
                                   <p className="text-[11px] text-nasmed-text-muted mt-0.5">Both fields are required before you can proceed.</p>
                                 </div>
                                 <div className="p-5 space-y-4">
                                   <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Transaction Reference / Narration <span className="text-red-500">*</span></label>
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Transaction Reference <span className="text-red-500">*</span></label>
                                     <input
                                       type="text"
                                       value={bankRefInput}
@@ -1078,9 +890,8 @@ export default function MembershipPage() {
                                     />
                                     <p className="text-[11px] text-nasmed-text-muted">Copy the reference from your bank alert SMS or receipt.</p>
                                   </div>
-
                                   <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Upload Transfer Receipt <span className="text-red-500">*</span></label>
+                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Upload Receipt <span className="text-red-500">*</span></label>
                                     {bankReceiptName ? (
                                       <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/30 rounded-xl p-3.5">
                                         <span className="text-xl">{bankReceiptName.endsWith(".pdf") ? "📋" : "🖼️"}</span>
@@ -1098,7 +909,7 @@ export default function MembershipPage() {
                                         <span className="text-2xl">{bankReceiptUploading ? "⏳" : "📎"}</span>
                                         <div className="flex-1">
                                           <p className="text-[13px] font-semibold text-nasmed-navy">
-                                            {bankReceiptUploading ? "Uploading…" : !bankRefInput.trim() ? "Enter transaction reference above first" : "Click to upload your transfer receipt"}
+                                            {bankReceiptUploading ? "Uploading…" : !bankRefInput.trim() ? "Enter transaction reference above first" : "Click to upload your receipt"}
                                           </p>
                                           <p className="text-[11px] text-nasmed-text-muted">PDF, JPG, or PNG — screenshots accepted</p>
                                         </div>
@@ -1111,96 +922,6 @@ export default function MembershipPage() {
                               </div>
                             </div>
                           )}
-
-                          {/* ── USSD ── */}
-                          {paymentMethod === 'ussd' && (
-                            <div className="space-y-4">
-                              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3.5 text-[12px] text-purple-800 leading-relaxed">
-                                <strong>How it works:</strong> Dial your bank's USSD code below, complete the transfer to our account, then enter your transaction reference or confirmation code here.
-                              </div>
-
-                              {/* USSD codes table */}
-                              <div className="border-2 border-purple-200 rounded-xl overflow-hidden">
-                                <div className="bg-gradient-to-r from-purple-700 to-purple-500 px-5 py-3">
-                                  <p className="font-bold text-[14px] text-white">📱 USSD Codes for Nigerian Banks</p>
-                                </div>
-                                <div className="bg-white divide-y divide-nasmed-gray-light">
-                                  {[
-                                    { bank: "GTBank", code: "*737#", note: "Send Money → Other Banks" },
-                                    { bank: "Zenith Bank", code: "*966#", note: "Transfer to Other Banks" },
-                                    { bank: "Access Bank", code: "*901#", note: "Transfer to Other Banks" },
-                                    { bank: "UBA", code: "*919#", note: "Fund Transfer" },
-                                    { bank: "First Bank", code: "*894#", note: "Pay Bills → Transfers" },
-                                    { bank: "Stanbic IBTC", code: "*909#", note: "Payments & Transfers" },
-                                    { bank: "Sterling Bank", code: "*822#", note: "Transfer" },
-                                    { bank: "Union Bank", code: "*826#", note: "Transfer Funds" },
-                                  ].map(b => (
-                                    <div key={b.bank} className="flex items-center justify-between px-5 py-2.5">
-                                      <span className="text-[13px] font-semibold text-nasmed-navy min-w-[120px]">{b.bank}</span>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-mono font-bold text-[15px] text-purple-700">{b.code}</span>
-                                        <button type="button" onClick={() => { navigator.clipboard.writeText(b.code); toast.success(`${b.bank} USSD code copied!`); }} className="text-[10px] text-purple-700 font-semibold bg-purple-100 px-1.5 py-0.5 rounded cursor-pointer border-none hover:bg-purple-200">Copy</button>
-                                      </div>
-                                      <span className="text-[11px] text-nasmed-text-muted hidden sm:block">{b.note}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                                <div className="px-5 py-3 bg-amber-50 border-t border-amber-200">
-                                  <p className="text-[11px] text-amber-800"><strong>Transfer to:</strong> {BANK_ACCOUNTS.NGN.accountNumber} ({BANK_ACCOUNTS.NGN.bankName}) — {BANK_ACCOUNTS.NGN.accountName} · Amount: <strong>{planPrice}</strong></p>
-                                </div>
-                              </div>
-
-                              {/* USSD details entry */}
-                              <div className="border-2 border-purple-300 rounded-xl overflow-hidden bg-white">
-                                <div className="bg-purple-50 px-5 py-3 border-b border-purple-200">
-                                  <p className="font-bold text-[14px] text-nasmed-navy">Confirm Your USSD Payment <span className="text-red-500">*</span></p>
-                                  <p className="text-[11px] text-nasmed-text-muted mt-0.5">Enter the details from your USSD completion message.</p>
-                                </div>
-                                <div className="p-5 space-y-4">
-                                  <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Your Bank <span className="text-red-500">*</span></label>
-                                    <select
-                                      title="Your Bank"
-                                      value={ussdBank}
-                                      onChange={e => setUssdBank(e.target.value)}
-                                      className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[13px] outline-none focus:border-purple-500 transition-colors"
-                                    >
-                                      <option value="">— Select your bank —</option>
-                                      {["GTBank", "Zenith Bank", "Access Bank", "UBA", "First Bank", "Stanbic IBTC", "Sterling Bank", "Union Bank", "Other"].map(b => (
-                                        <option key={b}>{b}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="flex flex-col gap-1.5">
-                                    <label className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide">Transaction Reference / Confirmation Code <span className="text-red-500">*</span></label>
-                                    <input
-                                      type="text"
-                                      value={ussdRef}
-                                      onChange={e => setUssdRef(e.target.value)}
-                                      placeholder="e.g. 000012345678 or reference from SMS"
-                                      className="py-3 px-4 border-2 border-nasmed-gray-light rounded-lg text-[13px] outline-none focus:border-purple-500 transition-colors font-mono"
-                                    />
-                                    <p className="text-[11px] text-nasmed-text-muted">Found in the USSD completion message or bank SMS alert.</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    disabled={!ussdBank || !ussdRef.trim()}
-                                    onClick={() => {
-                                      const ref = `USSD-${ussdRef.trim()}`;
-                                      saveTransaction(ref, `USSD (${ussdBank})`, "awaiting_confirmation");
-                                      setUssdSaved(true);
-                                      toast.success("USSD payment recorded! Admin will verify and activate your membership.");
-                                    }}
-                                    className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 disabled:cursor-not-allowed text-white font-bold text-[14px] py-3.5 rounded-xl transition-colors border-none cursor-pointer"
-                                  >
-                                    📱 Confirm USSD Payment →
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
 
                     </div>
                   )}
@@ -1223,12 +944,12 @@ export default function MembershipPage() {
                   ) : step === 5 ? (
                     <button
                       type="button"
-                      disabled={!paymentDone && !(paymentMethod === 'bank_transfer' && !!bankRefInput.trim() && !!bankReceiptUrl) && !ussdSaved}
+                      disabled={!(!!bankRefInput.trim() && !!bankReceiptUrl)}
                       onClick={() => setStep(6)}
-                      title={(!paymentDone && !(paymentMethod === 'bank_transfer' && !!bankRefInput.trim() && !!bankReceiptUrl) && !ussdSaved) ? "Complete payment to proceed" : ""}
+                      title={!(!!bankRefInput.trim() && !!bankReceiptUrl) ? "Complete payment to proceed" : ""}
                       className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-nasmed-green-light"
                     >
-                      {paymentDone ? "Continue →" : (paymentMethod === 'bank_transfer' && bankRefInput.trim() && bankReceiptUrl) || ussdSaved ? "Submit for Review →" : "🔒 Complete Payment First"}
+                      {bankRefInput.trim() && bankReceiptUrl ? "Submit for Review →" : "🔒 Complete Payment First"}
                     </button>
                   ) : null}
                 </div>
@@ -1400,23 +1121,6 @@ export default function MembershipPage() {
                         className="w-full bg-nasmed-navy text-white border-none py-2.5 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-nasmed-mid-blue transition-all"
                       >
                         I've Transferred — Upload Receipt →
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Paystack */}
-                  <div className="border-2 border-nasmed-gray-light rounded-xl overflow-hidden">
-                    <div className="bg-nasmed-off-white px-5 py-3 flex items-center gap-3 border-b border-nasmed-gray-light">
-                      <span className="text-[18px]">💳</span>
-                      <span className="font-bold text-[14px] text-nasmed-navy">Pay Online via Paystack</span>
-                    </div>
-                    <div className="p-5 flex items-center gap-4">
-                      <p className="text-[13px] text-nasmed-text-muted flex-1">Pay securely with card, bank transfer, or USSD.</p>
-                      <button
-                        onClick={handleSimplePaystack}
-                        className="shrink-0 bg-[#0BA4DB] hover:bg-[#0993c5] text-white font-semibold text-[13px] py-2.5 px-6 rounded-lg transition-colors border-none cursor-pointer"
-                      >
-                        Pay with Paystack →
                       </button>
                     </div>
                   </div>

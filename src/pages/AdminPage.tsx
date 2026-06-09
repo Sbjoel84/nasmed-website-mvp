@@ -11,55 +11,11 @@ import emailjs from "@emailjs/browser";
 import { CertificateFrame } from "@/components/MembershipCertificate";
 import applicationService, { Application } from "@/services/applicationService";
 import userService from "@/services/userService";
-import publicationService from "@/services/publicationService";
+import publicationService, { Publication } from "@/services/publicationService";
 import transactionService from "@/services/transactionService";
 import newsService, { NewsPost, NewsEvent } from "@/services/newsService";
-
-// ── DEMO_MEMBERS_INIT kept ONLY for the "Initialize All Accounts" one-time seeding tool ──
-const DEMO_MEMBERS_INIT = [
-  { id: "NASMED/24/0001", name: "Prof. Olatunde Oyebisi Makanju", username: "olatunde.makanju", email: "olatunde.makanju@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Immediate Past President", mustChange: true },
-  { id: "NASMED/24/0002", name: "Dr. Obinnaya Francis Udugwu", username: "obinnaya.udugwu", email: "obinnaya.udugwu@uniport.edu.ng", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Rivers", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0003", name: "Dr. Kweku Tandoh", username: "tkweks", email: "tkweks@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0004", name: "Dr. Jimi Osinaike", username: "jimisayoosinaike", email: "jimisayoosinaike@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0005", name: "Prof. Kayode Oke", username: "kayode.oke", email: "kayode.oke@uniben.edu", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Edo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0006", name: "Dr. Effi Ita Usen", username: "eleknigerialtd", email: "eleknigerialtd@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Akwa Ibom", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0007", name: "Dr. Solomon Omiken Okoro", username: "omisokoro", email: "omisokoro@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0008", name: "Dr. Habu Dahiru", username: "drhabudahiru54", email: "drhabudahiru54@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0009", name: "Dr. John Babatunde Akinbinu", username: "abembeinfo", email: "abembeinfo@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0010", name: "Dr. Moses Aghedo", username: "aghedomoses23", email: "aghedomoses23@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Edo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0011", name: "Prof. Temitope Oluwagbenga Alonge", username: "temitopealonge", email: "temitopealonge@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Oyo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0012", name: "Dr. Mazeed Alaba Oloko", username: "mazeedoloko", email: "mazeedoloko@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0013", name: "Mrs. Abimbola Olasumbo Olasupo", username: "abimbolaolasupo68", email: "abimbolaolasupo68@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0014", name: "Dr. Opemipo Ade-Akingboye", username: "adeakingboyeot", email: "adeakingboyeot@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0015", name: "Dr. Michael Kayode", username: "drseyi.kayode", email: "drseyi.kayode@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0016", name: "Dr. Sikuade Oladimeji Jagun", username: "sjagun42", email: "sjagun42@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0017", name: "Dr. Tijjani Bashir Ibrahim", username: "teejaybash54", email: "teejaybash54@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Kano", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0018", name: "Pharm. Oluwafemi Ayorinde", username: "joayorinde2002", email: "joayorinde2002@gmail.com", password: "nasmed2024!", prof: "Pharmacist", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0019", name: "Dr. Abdulkadir Musa Mu'azu", username: "taniyare43", email: "taniyare43@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0020", name: "Dr. Kolawole Mustapha", username: "mustaphaphysiotherapy", email: "mustaphaphysiotherapy@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0021", name: "Dr. Kenechukwu John Anieze", username: "kerenke25", email: "kerenke25@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Enugu", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0022", name: "Dr. Marian Mkpo Odu", username: "mixidoo", email: "mixidoo@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Akwa Ibom", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0023", name: "Dr. Akinwumi Kolawole Amao", username: "akin.amao", email: "akin.amao@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0024", name: "PT. Oluwabunmi Michael Bamidele", username: "michealbam11", email: "michealbam11@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0025", name: "Dr. Niran Adeniji", username: "niranadeadeniji", email: "niranadeadeniji@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0026", name: "Dr. Ummukulthoum Bakare", username: "ummubakare", email: "ummubakare@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0027", name: "Dr. Olajide Joseph Adebola", username: "oladebola", email: "oladebola@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "President", mustChange: true },
-  { id: "NASMED/24/0028", name: "Prof. Kenneth Anugweje", username: "kanugweje", email: "kanugweje@hotmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Rivers", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0029", name: "Dr. Olanrewaju Olabode Glover", username: "lanreglover2005", email: "lanreglover2005@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0030", name: "Mr. Iyanuoluwa Alonge", username: "iyanuoluwaalonge", email: "iyanuoluwaalonge@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Oyo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0031", name: "Dr. Akin George", username: "akinsg2000", email: "akinsg2000@yahoo.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Lagos", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0032", name: "Dr. Henry Chidebere Uche", username: "hennolimit", email: "hennolimit@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Anambra", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0033", name: "Dr. Adebukola Olurotimi Bojuwoye", username: "jacobojuwoye", email: "jacobojuwoye@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Fellow (FNASMED)", state: "Lagos", joined: "Jan 2024", status: "active", position: "1st Vice President", mustChange: true },
-  { id: "NASMED/24/0034", name: "Mrs. Monica Peter Ekpeyong", username: "emisca2010", email: "emisca2010@yahoo.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Cross River", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0035", name: "Dr. Sunday Baderinwa Adewale", username: "drbadewale", email: "drbadewale@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0036", name: "Dr. Sunday Onimisi Salami", username: "sunnysalami", email: "sunnysalami@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Kogi", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0037", name: "PT. Judith Amaka Enebe", username: "amakaenebe14", email: "amakaenebe14@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Abuja (FCT)", joined: "Jan 2024", status: "active", position: "Treasurer", mustChange: true },
-  { id: "NASMED/24/0038", name: "Dr. Phillip Alexander", username: "alexanderphilipomede", email: "alexanderphilipomede@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Delta", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0039", name: "Dr. Francis Onyebuchi Okanu", username: "okanuf", email: "okanuf@gmail.com", password: "nasmed2024!", prof: "Medical Doctor", tier: "Individual Member", state: "Imo", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0040", name: "PT. Ekundayo Ogunkunle", username: "ekundayoogunkunle", email: "ekundayoogunkunle@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Ogun", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0041", name: "PT. Nnenna Ngozi Dike", username: "ngozinnenna78", email: "ngozinnenna78@gmail.com", password: "nasmed2024!", prof: "Physiotherapist", tier: "Associate Member", state: "Enugu", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-  { id: "NASMED/24/0042", name: "Mrs. Salamatu Suleiman Kpautagi", username: "salamatukpautagi", email: "salamatukpautagi@gmail.com", password: "nasmed2024!", prof: "Allied Health", tier: "Associate Member", state: "Plateau", joined: "Jan 2024", status: "active", position: "Member", mustChange: true },
-];
+import eventRegistrationService, { EventRegistration } from "@/services/eventRegistrationService";
+import subscriptionService, { Subscription as DbSubscription } from "@/services/subscriptionService";
 
 // ── Display types matching existing JSX field references ──
 interface DisplayApp {
@@ -90,6 +46,12 @@ interface DisplayTxn {
   amount: string; currency: string; method: string; status: string;
   description: string; date: string; type: string;
   receiptUrl?: string; receiptName?: string;
+}
+
+interface DisplayEventReg {
+  id: string; eventTitle: string; name: string; email: string;
+  organisation: string; duesStatus: string; fee: string;
+  paymentStatus: string; paymentRef: string; status: string; date: string;
 }
 
 function toDisplayApp(a: Application): DisplayApp {
@@ -169,6 +131,22 @@ function toDisplayTxn(t: Record<string, unknown>): DisplayTxn {
   };
 }
 
+function toDisplayEventReg(r: EventRegistration): DisplayEventReg {
+  return {
+    id: r.id,
+    eventTitle: r.event_title,
+    name: r.full_name,
+    email: r.email,
+    organisation: r.organisation || "—",
+    duesStatus: r.dues_status === "member" ? "Paid-up member" : "Non-dues-paying",
+    fee: r.registration_fee === 0 ? "Free" : `₦${r.registration_fee.toLocaleString("en-NG")}`,
+    paymentStatus: r.payment_status,
+    paymentRef: r.payment_ref || "—",
+    status: r.status,
+    date: new Date(r.created_at).toLocaleDateString("en-GB"),
+  };
+}
+
 const TIER_AMOUNTS: Record<string, string> = {
   "Fellow (FNASMED)": "₦250,000",
   "Individual Member": "₦25,000",
@@ -184,7 +162,7 @@ const nigerianStates = [
   "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-type Subscription = { id: string; member: string; tier: string; start: string; expiry: string; status: string; amount: string };
+type DisplaySubscription = { id: string; member: string; tier: string; start: string; expiry: string; status: string; amount: string };
 
 const LOCAL_ADMIN_PASSWORD = "nasmed@admin2024";
 
@@ -201,19 +179,22 @@ export default function AdminPage() {
   const [members, setMembers] = useState<DisplayMember[]>([]);
   const [publications, setPublications] = useState<DisplayPub[]>([]);
   const [transactions, setTransactions] = useState<DisplayTxn[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<DisplayEventReg[]>([]);
+  const [dbSubscriptions, setDbSubscriptions] = useState<DbSubscription[]>([]);
+  const [appsTab, setAppsTab] = useState<"membership" | "events">("membership");
   const [search, setSearch] = useState("");
 
-  const subscriptions: Subscription[] = members.map(m => {
-    const parts = m.joined.split(" ");
-    const expiry = parts.length === 2 ? `${parts[0]} ${parseInt(parts[1]) + 1}` : m.joined;
+  // Map DB subscriptions to display shape, resolving member name from loaded members
+  const subscriptions: DisplaySubscription[] = dbSubscriptions.map(s => {
+    const memberRecord = members.find(m => m._dbId === s.member_id);
     return {
-      id: m.id,
-      member: m.name,
-      tier: m.tier,
-      start: m.joined,
-      expiry,
-      status: m.status,
-      amount: TIER_AMOUNTS[m.tier] ?? "₦25,000",
+      id: s.id,
+      member: memberRecord?.name || s.member_id || "—",
+      tier: s.tier || memberRecord?.tier || "—",
+      start: s.start_date ? new Date(s.start_date).toLocaleDateString("en-GB") : "—",
+      expiry: s.expiry_date ? new Date(s.expiry_date).toLocaleDateString("en-GB") : "—",
+      status: s.status || "active",
+      amount: s.amount || TIER_AMOUNTS[s.tier ?? ""] || "—",
     };
   });
 
@@ -241,7 +222,7 @@ export default function AdminPage() {
   const [pubPrice, setPubPrice] = useState("");
   const [pubFile, setPubFile] = useState<File | null>(null);
   const [editMember, setEditMember] = useState<DisplayMember | null>(null);
-  const [txnTypeFilter, setTxnTypeFilter] = useState<"all" | "membership" | "contribution">("all");
+  const [txnTypeFilter, setTxnTypeFilter] = useState<"all" | "membership" | "contribution" | "event_registration">("all");
 
   // News & Events state
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([]);
@@ -258,13 +239,122 @@ export default function AdminPage() {
   const [evDate, setEvDate] = useState("");
   const [evCtaText, setEvCtaText] = useState("Register");
   const [evCtaStyle, setEvCtaStyle] = useState<"filled" | "outline">("filled");
+  const [evRegistrationFee, setEvRegistrationFee] = useState("0");
+  const [evBodyContent, setEvBodyContent] = useState("");
 
   const canAccess = localAuth || (!loading && isAdmin);
 
-  const [initProgress, setInitProgress] = useState<{ done: number; total: number; running: boolean; log: string[] }>({ done: 0, total: 0, running: false, log: [] });
   const [approvedCreds, setApprovedCreds] = useState<{ name: string; username: string; nasmedEmail: string; memberNumber: string; password: string } | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [certToSend, setCertToSend] = useState<{ name: string; certNumber: string; date: string; tier: string; email: string } | null>(null);
+
+  // Edit news post
+  const [editPost, setEditPost] = useState<NewsPost | null>(null);
+  const [epTitle, setEpTitle] = useState("");
+  const [epDesc, setEpDesc] = useState("");
+  const [epCat, setEpCat] = useState("update");
+  const [epCatLabel, setEpCatLabel] = useState("UPDATE");
+  const [epDateLabel, setEpDateLabel] = useState("");
+  const [epReadTime, setEpReadTime] = useState("3 min read");
+
+  const openEditPost = (p: NewsPost) => {
+    setEditPost(p);
+    setEpTitle(p.title);
+    setEpDesc(p.description);
+    setEpCat(p.category);
+    setEpCatLabel(p.category_label);
+    setEpDateLabel(p.date_label || "");
+    setEpReadTime(p.read_time || "3 min read");
+  };
+
+  const saveEditPost = async () => {
+    if (!editPost) return;
+    if (!epTitle.trim()) { toast.error("Title is required."); return; }
+    try {
+      await newsService.updatePost(editPost.id, { title: epTitle, description: epDesc, category: epCat, category_label: epCatLabel, date_label: epDateLabel, read_time: epReadTime });
+      setNewsPosts(prev => prev.map(x => x.id === editPost.id ? { ...x, title: epTitle, description: epDesc, category: epCat, category_label: epCatLabel, date_label: epDateLabel, read_time: epReadTime } : x));
+      setEditPost(null);
+      toast.success("Post updated.");
+    } catch { toast.error("Failed to update post."); }
+  };
+
+  // Edit event
+  const [editEvent, setEditEvent] = useState<NewsEvent | null>(null);
+  const [eeTitle, setEeTitle] = useState("");
+  const [eeDesc, setEeDesc] = useState("");
+  const [eeLocation, setEeLocation] = useState("");
+  const [eeDate, setEeDate] = useState("");
+  const [eeCtaText, setEeCtaText] = useState("Register");
+  const [eeCtaStyle, setEeCtaStyle] = useState<"filled" | "outline">("filled");
+  const [eeFee, setEeFee] = useState("0");
+  const [eeBody, setEeBody] = useState("");
+
+  const openEditEvent = (ev: NewsEvent) => {
+    setEditEvent(ev);
+    setEeTitle(ev.title);
+    setEeDesc(ev.description);
+    setEeLocation(ev.location || "");
+    setEeDate(ev.event_date ? ev.event_date.slice(0, 10) : "");
+    setEeCtaText(ev.cta_text);
+    setEeCtaStyle(ev.cta_style);
+    setEeFee(String(ev.registration_fee || 0));
+    setEeBody(ev.body_content || "");
+  };
+
+  const saveEditEvent = async () => {
+    if (!editEvent) return;
+    if (!eeTitle.trim()) { toast.error("Title is required."); return; }
+    const d = eeDate ? new Date(eeDate) : null;
+    try {
+      const updates: Partial<NewsEvent> = {
+        title: eeTitle, description: eeDesc, location: eeLocation,
+        event_date: eeDate || undefined,
+        day_label: d ? String(d.getDate()).padStart(2, "0") : editEvent.day_label,
+        month_label: d ? d.toLocaleString("en-US", { month: "short" }).toUpperCase() : editEvent.month_label,
+        cta_text: eeCtaText, cta_style: eeCtaStyle,
+        registration_fee: Number(eeFee) || 0,
+        body_content: eeBody || undefined,
+      };
+      await newsService.updateEvent(editEvent.id, updates);
+      setNewsEvents(prev => prev.map(x => x.id === editEvent.id ? { ...x, ...updates } : x));
+      setEditEvent(null);
+      toast.success("Event updated.");
+    } catch { toast.error("Failed to update event."); }
+  };
+
+  // Edit publication
+  const [editPubItem, setEditPubItem] = useState<DisplayPub | null>(null);
+  const [epubTitle, setEpubTitle] = useState("");
+  const [epubType, setEpubType] = useState("Guidelines");
+  const [epubContent, setEpubContent] = useState("");
+  const [epubAccess, setEpubAccess] = useState("free");
+  const [epubPrice, setEpubPrice] = useState("");
+
+  const openEditPub = (p: DisplayPub) => {
+    setEditPubItem(p);
+    setEpubTitle(p.title);
+    setEpubType(p.type);
+    setEpubContent("");
+    setEpubAccess(p.access);
+    setEpubPrice(p.price);
+  };
+
+  const saveEditPub = async () => {
+    if (!editPubItem) return;
+    if (!epubTitle.trim()) { toast.error("Title is required."); return; }
+    try {
+      await publicationService.update(editPubItem.id, {
+        title: epubTitle,
+        type: epubType as Publication["type"],
+        description: epubContent || undefined,
+        access: epubAccess,
+        price: epubAccess === "paid" ? epubPrice : undefined,
+      });
+      setPublications(prev => prev.map(x => x.id === editPubItem.id ? { ...x, title: epubTitle, type: epubType, access: epubAccess, price: epubPrice } : x));
+      setEditPubItem(null);
+      toast.success("Publication updated.");
+    } catch { toast.error("Failed to update publication."); }
+  };
 
   // Certificate email effect
   useEffect(() => {
@@ -312,6 +402,8 @@ export default function AdminPage() {
       transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
       newsService.getAllPostsAdmin().then(data => setNewsPosts(data)).catch(() => {});
       newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
+      eventRegistrationService.getAll().then(data => setEventRegistrations(data.map(toDisplayEventReg))).catch(() => {});
+      subscriptionService.getAll().then(data => setDbSubscriptions(data)).catch(() => {});
     };
 
     loadAll();
@@ -334,6 +426,12 @@ export default function AdminPage() {
     const eventSub = newsService.subscribeToEventChanges(() => {
       newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
     });
+    const evRegSub = eventRegistrationService.subscribeToChanges(() => {
+      eventRegistrationService.getAll().then(data => setEventRegistrations(data.map(toDisplayEventReg))).catch(() => {});
+    });
+    const subSub = subscriptionService.subscribeToChanges(() => {
+      subscriptionService.getAll().then(data => setDbSubscriptions(data)).catch(() => {});
+    });
 
     return () => {
       supabase.removeChannel(appSub);
@@ -342,27 +440,10 @@ export default function AdminPage() {
       supabase.removeChannel(txnSub);
       supabase.removeChannel(newsSub);
       supabase.removeChannel(eventSub);
+      supabase.removeChannel(evRegSub);
+      supabase.removeChannel(subSub);
     };
   }, [canAccess]);
-
-  const initializeMemberAccounts = async () => {
-    if (!confirm(`This will create Supabase auth accounts for all ${DEMO_MEMBERS_INIT.length} members. Existing accounts will be skipped. Continue?`)) return;
-    setInitProgress({ done: 0, total: DEMO_MEMBERS_INIT.length, running: true, log: [] });
-    const log: string[] = [];
-    for (let i = 0; i < DEMO_MEMBERS_INIT.length; i++) {
-      const m = DEMO_MEMBERS_INIT[i];
-      const { error } = await authService.signUpMember(
-        m.email, m.password, m.name, m.tier, m.username, m.id, m.position,
-      );
-      if (error && !error.toLowerCase().includes("already registered") && !error.toLowerCase().includes("user already")) {
-        log.push(`❌ ${m.username}: ${error}`);
-      } else {
-        log.push(`✓ ${m.username}`);
-      }
-      setInitProgress({ done: i + 1, total: DEMO_MEMBERS_INIT.length, running: i + 1 < DEMO_MEMBERS_INIT.length, log: [...log] });
-    }
-    toast.success("Member account initialization complete!");
-  };
 
   if (!canAccess && !loading) {
     const handleLocalLogin = (e: React.FormEvent) => {
@@ -662,7 +743,7 @@ export default function AdminPage() {
                 {[
                   { num: members.length.toLocaleString(), label: "Total Members", trend: `${members.length} registered`, color: "border-nasmed-mid-blue" },
                   { num: String(pendingCount), label: "Pending Applications", trend: "Needs Review", color: "border-nasmed-green", trendColor: "text-amber-500" },
-                  { num: String(approvedCount), label: "Approved This Month", trend: "↑ New Members", color: "border-amber-500" },
+                  { num: String(eventRegistrations.filter(r => r.status === "pending").length), label: "Event Registrations", trend: `${eventRegistrations.length} total`, color: "border-amber-500", trendColor: "text-amber-500" },
                   { num: String(subscriptions.filter(s => s.status === "active").length), label: "Active Subscriptions", trend: revenueLabel, color: "border-nasmed-green", trendColor: "text-nasmed-green" },
                 ].map((c, i) => (
                   <div key={i} className={`bg-white rounded-xl p-6 shadow-sm border-t-4 ${c.color}`}>
@@ -675,10 +756,10 @@ export default function AdminPage() {
 
               {/* Quick Actions */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-9">
-                <button onClick={() => setActiveSection("applications")} className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-nasmed-green hover:shadow-md transition-all text-left">
+                <button type="button" onClick={() => { setActiveSection("applications"); setAppsTab("membership"); }} className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-nasmed-green hover:shadow-md transition-all text-left">
                   <div className="text-2xl mb-2">📋</div>
                   <div className="font-bold text-nasmed-navy">Review Applications</div>
-                  <div className="text-sm text-nasmed-text-muted">{pendingCount} pending</div>
+                  <div className="text-sm text-nasmed-text-muted">{pendingCount} membership · {eventRegistrations.filter(r => r.status === "pending").length} event pending</div>
                 </button>
                 <button onClick={() => setActiveSection("publications")} className="bg-white rounded-xl p-6 shadow-sm border-t-4 border-nasmed-mid-blue hover:shadow-md transition-all text-left">
                   <div className="text-2xl mb-2">📚</div>
@@ -692,25 +773,63 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Recent Activity — from live applications */}
+              {/* Recent Activity — live from applications + event registrations */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <h3 className="text-base font-bold text-nasmed-navy mb-5">Recent Activity</h3>
-                {applications.slice(0, 4).length > 0 ? (
-                  <div className="space-y-4">
-                    {applications.slice(0, 4).map((a, i) => (
-                      <div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-nasmed-off-white transition-all">
-                        <div className="w-10 h-10 bg-nasmed-off-white rounded-full flex items-center justify-center text-lg">📝</div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-nasmed-navy">New membership application</div>
-                          <div className="text-xs text-nasmed-text-muted">{a.name}</div>
-                        </div>
-                        <div className="text-xs text-nasmed-text-muted">{a.date}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[13px] text-nasmed-text-muted text-center py-6">No recent activity.</p>
-                )}
+                {(() => {
+                  const appItems = applications.map(a => ({
+                    key: "app-" + a.id,
+                    icon: "📝",
+                    label: "New membership application",
+                    sub: `${a.name} · ${a.tier}`,
+                    date: a.date,
+                    badge: a.status,
+                    onClick: () => { setActiveSection("applications"); setAppsTab("membership"); },
+                  }));
+                  const regItems = eventRegistrations.map(r => ({
+                    key: "reg-" + r.id,
+                    icon: "📅",
+                    label: "Event registration",
+                    sub: `${r.name} · ${r.eventTitle}`,
+                    date: r.date,
+                    badge: r.status,
+                    onClick: () => { setActiveSection("applications"); setAppsTab("events"); },
+                  }));
+                  const combined = [...appItems, ...regItems]
+                    .sort((a, b) => {
+                      const parse = (d: string) => {
+                        const [day, month, year] = d.split("/");
+                        return new Date(`${year}-${month}-${day}`).getTime();
+                      };
+                      return parse(b.date) - parse(a.date);
+                    })
+                    .slice(0, 6);
+
+                  return combined.length > 0 ? (
+                    <div className="space-y-3">
+                      {combined.map(item => (
+                        <button
+                          type="button"
+                          key={item.key}
+                          onClick={item.onClick}
+                          className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-nasmed-off-white transition-all text-left"
+                        >
+                          <div className="w-10 h-10 bg-nasmed-off-white rounded-full flex items-center justify-center text-lg flex-shrink-0">{item.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-nasmed-navy">{item.label}</div>
+                            <div className="text-xs text-nasmed-text-muted truncate">{item.sub}</div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <span className="text-xs text-nasmed-text-muted">{item.date}</span>
+                            {statusBadge(item.badge)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-nasmed-text-muted text-center py-6">No recent activity.</p>
+                  );
+                })()}
               </div>
             </>
           )}
@@ -718,48 +837,142 @@ export default function AdminPage() {
           {/* ── Applications ── */}
           {activeSection === "applications" && (
             <>
-              <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Membership Applications</h2>
-              <p className="text-nasmed-text-muted text-sm mb-7">Review and process all incoming membership applications.</p>
-              <div className="bg-white rounded-[14px] p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-base font-bold text-nasmed-navy">All Applications</h3>
-                  <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[220px] focus:border-nasmed-mid-blue" placeholder="Search by name, email..." />
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead><tr>{["Name", "Email", "Tier", "State", "Date", "Payment", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
-                    <tbody>
-                      {(filterRows(applications, ["name", "email", "prof", "tier"]) as DisplayApp[]).map(a => (
-                        <tr key={a.id} className="hover:bg-nasmed-off-white">
-                          <td className="py-3 px-3 text-[13px] font-semibold">{a.name}</td>
-                          <td className="py-3 px-3 text-[13px]">{a.email}</td>
-                          <td className="py-3 px-3 text-[13px]">{a.tier}</td>
-                          <td className="py-3 px-3 text-[13px]">{a.state}</td>
-                          <td className="py-3 px-3 text-[13px]">{a.date}</td>
-                          <td className="py-3 px-3">
-                            <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${a.payment === "Paid" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-gray-100 text-gray-500"}`}>
-                              {a.payment}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3">{statusBadge(a.status)}</td>
-                          <td className="py-3 px-3">
-                            <div className="flex gap-1.5 items-center">
-                              <button onClick={() => setViewApp(a)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
-                              {a.status === "pending" && <>
-                                <button onClick={() => handleAction(a.id, "approve")} disabled={approvingId === a.id} className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light disabled:opacity-50">{approvingId === a.id ? "…" : "✓"}</button>
-                                <button onClick={() => handleAction(a.id, "reject")} disabled={!!approvingId} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600 disabled:opacity-50">✗</button>
-                              </>}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {applications.length === 0 && (
-                    <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No applications yet.</div>
-                  )}
-                </div>
+              <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Applications & Registrations</h2>
+              <p className="text-nasmed-text-muted text-sm mb-5">Review and process all incoming membership applications and event registrations.</p>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mb-6">
+                {([
+                  { key: "membership", label: "Membership Applications", count: applications.length },
+                  { key: "events",     label: "Event Registrations",      count: eventRegistrations.length },
+                ] as { key: "membership" | "events"; label: string; count: number }[]).map(tab => (
+                  <button
+                    type="button"
+                    key={tab.key}
+                    onClick={() => { setAppsTab(tab.key); setSearch(""); }}
+                    className={`py-2 px-5 rounded-lg text-[13px] font-semibold border-[1.5px] cursor-pointer transition-all ${appsTab === tab.key ? "bg-nasmed-mid-blue text-white border-nasmed-mid-blue" : "bg-white text-nasmed-text-muted border-nasmed-gray-light hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue"}`}
+                  >
+                    {tab.label}
+                    <span className={`ml-2 py-0.5 px-2 rounded-full text-[11px] ${appsTab === tab.key ? "bg-white/20 text-white" : "bg-nasmed-gray-light text-nasmed-text-muted"}`}>{tab.count}</span>
+                  </button>
+                ))}
               </div>
+
+              {/* ── Membership Applications Tab ── */}
+              {appsTab === "membership" && (
+                <div className="bg-white rounded-[14px] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-bold text-nasmed-navy">All Membership Applications</h3>
+                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[220px] focus:border-nasmed-mid-blue" placeholder="Search by name, email..." />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead><tr>{["Name", "Email", "Tier", "State", "Date", "Payment", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
+                      <tbody>
+                        {(filterRows(applications, ["name", "email", "prof", "tier"]) as DisplayApp[]).map(a => (
+                          <tr key={a.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/30 last:border-0">
+                            <td className="py-3 px-3 text-[13px] font-semibold">{a.name}</td>
+                            <td className="py-3 px-3 text-[13px]">{a.email}</td>
+                            <td className="py-3 px-3 text-[13px]">{a.tier}</td>
+                            <td className="py-3 px-3 text-[13px]">{a.state}</td>
+                            <td className="py-3 px-3 text-[13px]">{a.date}</td>
+                            <td className="py-3 px-3">
+                              <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${a.payment === "Paid" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-gray-100 text-gray-500"}`}>
+                                {a.payment}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">{statusBadge(a.status)}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex gap-1.5 items-center">
+                                <button type="button" onClick={() => setViewApp(a)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
+                                {a.status === "pending" && <>
+                                  <button type="button" onClick={() => handleAction(a.id, "approve")} disabled={approvingId === a.id} className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light disabled:opacity-50">{approvingId === a.id ? "…" : "✓"}</button>
+                                  <button type="button" onClick={() => handleAction(a.id, "reject")} disabled={!!approvingId} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600 disabled:opacity-50">✗</button>
+                                </>}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {applications.length === 0 && (
+                      <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No membership applications yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Event Registrations Tab ── */}
+              {appsTab === "events" && (
+                <div className="bg-white rounded-[14px] p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-base font-bold text-nasmed-navy">All Event Registrations</h3>
+                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[220px] focus:border-nasmed-mid-blue" placeholder="Search by name, email, event..." />
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          {["Name", "Email", "Organisation", "Event", "Date", "Dues Status", "Fee", "Payment", "Status", "Actions"].map(h => (
+                            <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(filterRows(eventRegistrations, ["name", "email", "eventTitle", "organisation"]) as DisplayEventReg[]).map(r => (
+                          <tr key={r.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/30 last:border-0">
+                            <td className="py-3 px-3 text-[13px] font-semibold whitespace-nowrap">{r.name}</td>
+                            <td className="py-3 px-3 text-[13px]">{r.email}</td>
+                            <td className="py-3 px-3 text-[13px]">{r.organisation}</td>
+                            <td className="py-3 px-3 text-[13px] max-w-[180px] truncate" title={r.eventTitle}>{r.eventTitle}</td>
+                            <td className="py-3 px-3 text-[13px] whitespace-nowrap">{r.date}</td>
+                            <td className="py-3 px-3 text-[13px] whitespace-nowrap">
+                              <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${r.duesStatus === "Paid-up member" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-amber-500/15 text-amber-600"}`}>
+                                {r.duesStatus}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-[13px] font-semibold whitespace-nowrap">{r.fee}</td>
+                            <td className="py-3 px-3">{statusBadge(r.paymentStatus)}</td>
+                            <td className="py-3 px-3">{statusBadge(r.status)}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex gap-1.5 items-center">
+                                {r.status === "pending" && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        await eventRegistrationService.updateStatus(r.id, "confirmed");
+                                        setEventRegistrations(prev => prev.map(x => x.id === r.id ? { ...x, status: "confirmed" } : x));
+                                        toast.success(`Registration confirmed for ${r.name}`);
+                                      }}
+                                      className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light"
+                                    >✓ Confirm</button>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        await eventRegistrationService.updateStatus(r.id, "cancelled");
+                                        setEventRegistrations(prev => prev.map(x => x.id === r.id ? { ...x, status: "cancelled" } : x));
+                                        toast.success(`Registration cancelled for ${r.name}`);
+                                      }}
+                                      className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
+                                    >✗</button>
+                                  </>
+                                )}
+                                {r.paymentRef !== "—" && (
+                                  <span className="text-[10px] font-mono text-nasmed-text-muted" title={`Ref: ${r.paymentRef}`}>Ref: {r.paymentRef.slice(0, 10)}…</span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {eventRegistrations.length === 0 && (
+                      <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No event registrations yet.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -907,7 +1120,7 @@ export default function AdminPage() {
                           <td className="py-3 px-3">{statusBadge(p.status)}</td>
                           <td className="py-3 px-3">
                             <div className="flex gap-1.5">
-                              <button onClick={() => toast.info(`Viewing ${p.title}`)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">View</button>
+                              <button onClick={() => openEditPub(p)} className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80">Edit</button>
                               <button onClick={() => deletePublication(p.id)} className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600">🗑</button>
                             </div>
                           </td>
@@ -999,6 +1212,11 @@ export default function AdminPage() {
                               <div className="flex gap-1.5">
                                 <button
                                   type="button"
+                                  onClick={() => openEditPost(p)}
+                                  className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80"
+                                >Edit</button>
+                                <button
+                                  type="button"
                                   onClick={async () => {
                                     await newsService.updatePost(p.id, { published: !p.published });
                                     setNewsPosts(prev => prev.map(x => x.id === p.id ? { ...x, published: !x.published } : x));
@@ -1056,6 +1274,14 @@ export default function AdminPage() {
                       <option value="outline">Outline</option>
                     </select>
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Registration Fee (₦) — 0 for free</label>
+                    <input type="number" min="0" value={evRegistrationFee} onChange={e => setEvRegistrationFee(e.target.value)} placeholder="e.g. 10000" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Full Event Content (body)</label>
+                    <textarea rows={6} value={evBodyContent} onChange={e => setEvBodyContent(e.target.value)} placeholder="Paste full event announcement, programme schedule, etc." className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1068,10 +1294,14 @@ export default function AdminPage() {
                         event_date: evDate || undefined,
                         day_label: d ? String(d.getDate()).padStart(2, "0") : "",
                         month_label: d ? d.toLocaleString("en-US", { month: "short" }).toUpperCase() : "",
-                        cta_text: evCtaText, cta_style: evCtaStyle, published: true,
+                        cta_text: evCtaText, cta_style: evCtaStyle,
+                        registration_fee: Number(evRegistrationFee) || 0,
+                        body_content: evBodyContent || undefined,
+                        published: true,
                       });
                       setNewsEvents(prev => [...prev, ev]);
                       setEvTitle(""); setEvDesc(""); setEvLocation(""); setEvDate(""); setEvCtaText("Register"); setEvCtaStyle("filled");
+                      setEvRegistrationFee("0"); setEvBodyContent("");
                       toast.success("Event created!");
                     } catch { toast.error("Failed to create event."); }
                   }}
@@ -1098,6 +1328,11 @@ export default function AdminPage() {
                             <td className="py-3 px-3">{statusBadge(ev.published ? "published" : "draft")}</td>
                             <td className="py-3 px-3">
                               <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditEvent(ev)}
+                                  className="bg-nasmed-mid-blue text-white border-none py-1 px-3 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80"
+                                >Edit</button>
                                 <button
                                   type="button"
                                   onClick={async () => {
@@ -1159,7 +1394,7 @@ export default function AdminPage() {
                   <table className="w-full border-collapse">
                     <thead><tr>{["ID", "Member", "Tier", "Start Date", "Expiry Date", "Amount", "Status", "Actions"].map(h => <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light">{h}</th>)}</tr></thead>
                     <tbody>
-                      {(filterRows(subscriptions, ["member", "tier"]) as Subscription[]).map(s => (
+                      {(filterRows(subscriptions, ["member", "tier"]) as DisplaySubscription[]).map(s => (
                         <tr key={s.id} className="hover:bg-nasmed-off-white">
                           <td className="py-3 px-3 text-[11px] font-mono">{s.id}</td>
                           <td className="py-3 px-3 text-[13px] font-semibold">{s.member}</td>
@@ -1187,7 +1422,27 @@ export default function AdminPage() {
           {activeSection === "transactions" && (
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Transactions</h2>
-              <p className="text-nasmed-text-muted text-sm mb-7">All payment records — membership registrations and additional contributions.</p>
+              <p className="text-nasmed-text-muted text-sm mb-5">All payment records — membership registrations, event fees and additional contributions.</p>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mb-6 flex-wrap">
+                {([
+                  { key: "all",                label: "All Transactions",       count: transactions.length },
+                  { key: "membership",         label: "Membership",             count: transactions.filter(t => t.type === "membership").length },
+                  { key: "event_registration", label: "Event Registrations",    count: transactions.filter(t => t.type === "event_registration").length },
+                  { key: "contribution",       label: "Contributions",          count: transactions.filter(t => t.type === "contribution").length },
+                ] as { key: "all" | "membership" | "contribution" | "event_registration"; label: string; count: number }[]).map(tab => (
+                  <button
+                    type="button"
+                    key={tab.key}
+                    onClick={() => { setTxnTypeFilter(tab.key); setSearch(""); }}
+                    className={`py-2 px-5 rounded-lg text-[13px] font-semibold border-[1.5px] cursor-pointer transition-all ${txnTypeFilter === tab.key ? "bg-nasmed-mid-blue text-white border-nasmed-mid-blue" : "bg-white text-nasmed-text-muted border-nasmed-gray-light hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue"}`}
+                  >
+                    {tab.label}
+                    <span className={`ml-2 py-0.5 px-2 rounded-full text-[11px] ${txnTypeFilter === tab.key ? "bg-white/20 text-white" : "bg-nasmed-gray-light text-nasmed-text-muted"}`}>{tab.count}</span>
+                  </button>
+                ))}
+              </div>
 
               {/* Bank Account Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
@@ -1238,20 +1493,9 @@ export default function AdminPage() {
               {/* Transaction Records */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-nasmed-navy">Payment Records</h3>
-                    <div className="flex gap-1 ml-2">
-                      {(["all", "membership", "contribution"] as const).map(f => (
-                        <button
-                          key={f}
-                          onClick={() => setTxnTypeFilter(f)}
-                          className={`text-[11px] font-bold px-3 py-1 rounded-full border cursor-pointer transition-all ${txnTypeFilter === f ? "bg-nasmed-navy text-white border-nasmed-navy" : "bg-transparent text-nasmed-text-muted border-nasmed-gray-light hover:border-nasmed-navy hover:text-nasmed-navy"}`}
-                        >
-                          {f === "all" ? "All" : f === "membership" ? "Membership" : "Contributions"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <h3 className="text-base font-bold text-nasmed-navy">
+                    {txnTypeFilter === "all" ? "All Payment Records" : txnTypeFilter === "membership" ? "Membership Payments" : txnTypeFilter === "event_registration" ? "Event Registration Payments" : "Contribution Payments"}
+                  </h3>
                   <div className="flex gap-3 items-center">
                     <button
                       onClick={() => { transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {}); }}
@@ -1286,8 +1530,8 @@ export default function AdminPage() {
                                 <div className="text-[11px] text-nasmed-text-muted">{t.email}</div>
                               </td>
                               <td className="py-3 px-3">
-                                <span className={`py-0.5 px-2 rounded-full text-[10px] font-bold ${t.type === "contribution" ? "bg-purple-500/10 text-purple-700" : "bg-nasmed-mid-blue/10 text-nasmed-mid-blue"}`}>
-                                  {t.type === "contribution" ? "Contribution" : "Membership"}
+                                <span className={`py-0.5 px-2 rounded-full text-[10px] font-bold ${t.type === "contribution" ? "bg-purple-500/10 text-purple-700" : t.type === "event_registration" ? "bg-green-500/10 text-green-700" : "bg-nasmed-mid-blue/10 text-nasmed-mid-blue"}`}>
+                                  {t.type === "contribution" ? "Contribution" : t.type === "event_registration" ? "Event Reg" : "Membership"}
                                 </span>
                                 <div className="text-[12px] text-nasmed-text-muted mt-0.5">{t.tier || "—"}</div>
                               </td>
@@ -1341,37 +1585,6 @@ export default function AdminPage() {
             <>
               <h2 className="font-heading text-[26px] text-nasmed-navy mb-1.5">Member Credentials</h2>
               <p className="text-nasmed-text-muted text-sm mb-7">View and manage member login credentials for the Member Portal.</p>
-
-              {/* Initialize Member Accounts */}
-              <div className="bg-amber-50 border border-amber-200 rounded-[14px] p-6 mb-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-heading text-[17px] text-nasmed-navy mb-1">Initialize Member Accounts</h3>
-                    <p className="text-[13px] text-nasmed-text-muted max-w-[520px]">
-                      Creates Supabase auth accounts for all {DEMO_MEMBERS_INIT.length} members using their username and default password (<code className="bg-amber-100 px-1 rounded">nasmed2024!</code>). Members will be required to change their password on first login. Existing accounts are skipped.
-                    </p>
-                  </div>
-                  <button
-                    onClick={initializeMemberAccounts}
-                    disabled={initProgress.running}
-                    className="shrink-0 bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-[14px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {initProgress.running ? `Creating... (${initProgress.done}/${initProgress.total})` : "Initialize All Accounts →"}
-                  </button>
-                </div>
-
-                {initProgress.log.length > 0 && (
-                  <div className="mt-4 bg-white border border-amber-200 rounded-lg p-4 max-h-[200px] overflow-y-auto">
-                    <p className="text-[11px] font-bold text-nasmed-text-muted uppercase tracking-wide mb-2">Progress Log</p>
-                    {initProgress.log.map((line, i) => (
-                      <p key={i} className={`text-[12px] font-mono ${line.startsWith("❌") ? "text-red-600" : "text-nasmed-green"}`}>{line}</p>
-                    ))}
-                    {!initProgress.running && (
-                      <p className="text-[13px] font-semibold text-nasmed-navy mt-2">Done — {initProgress.done}/{initProgress.total} accounts processed.</p>
-                    )}
-                  </div>
-                )}
-              </div>
 
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <div className="overflow-x-auto">
@@ -1571,6 +1784,169 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
               <button onClick={() => setEditMember(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
               <button onClick={saveMember} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit News Post Modal ── */}
+      {editPost && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[540px] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-nasmed-gray-light">
+              <h3 className="font-heading text-[18px] font-bold text-nasmed-navy">Edit News Post</h3>
+              <button onClick={() => setEditPost(null)} className="text-nasmed-text-muted hover:text-nasmed-navy text-xl leading-none bg-transparent border-none cursor-pointer">✕</button>
+            </div>
+            <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Title <span className="text-red-600">*</span></label>
+                <input type="text" value={epTitle} onChange={e => setEpTitle(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Description</label>
+                <textarea value={epDesc} onChange={e => setEpDesc(e.target.value)} rows={3} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Category</label>
+                  <select value={epCat} onChange={e => { setEpCat(e.target.value); setEpCatLabel(e.target.value.toUpperCase()); }} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue">
+                    <option value="conference">Conference</option>
+                    <option value="research">Research</option>
+                    <option value="update">Update</option>
+                    <option value="governance">Governance</option>
+                    <option value="milestones">Milestones</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Category Label</label>
+                  <input type="text" value={epCatLabel} onChange={e => setEpCatLabel(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Date Label</label>
+                  <input type="text" value={epDateLabel} onChange={e => setEpDateLabel(e.target.value)} placeholder="e.g. Jul 2025" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Read Time</label>
+                  <input type="text" value={epReadTime} onChange={e => setEpReadTime(e.target.value)} placeholder="3 min read" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
+              <button onClick={() => setEditPost(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
+              <button onClick={saveEditPost} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Event Modal ── */}
+      {editEvent && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[600px] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-nasmed-gray-light">
+              <h3 className="font-heading text-[18px] font-bold text-nasmed-navy">Edit Event</h3>
+              <button onClick={() => setEditEvent(null)} className="text-nasmed-text-muted hover:text-nasmed-navy text-xl leading-none bg-transparent border-none cursor-pointer">✕</button>
+            </div>
+            <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Title <span className="text-red-600">*</span></label>
+                <input type="text" value={eeTitle} onChange={e => setEeTitle(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Description</label>
+                <input type="text" value={eeDesc} onChange={e => setEeDesc(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Location</label>
+                  <input type="text" value={eeLocation} onChange={e => setEeLocation(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Event Date</label>
+                  <input type="date" value={eeDate} onChange={e => setEeDate(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">CTA Button Text</label>
+                  <input type="text" value={eeCtaText} onChange={e => setEeCtaText(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Button Style</label>
+                  <select value={eeCtaStyle} onChange={e => setEeCtaStyle(e.target.value as "filled" | "outline")} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue">
+                    <option value="filled">Filled (Green)</option>
+                    <option value="outline">Outline</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Registration Fee (₦)</label>
+                  <input type="number" min="0" value={eeFee} onChange={e => setEeFee(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Full Event Content (body)</label>
+                <textarea rows={5} value={eeBody} onChange={e => setEeBody(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
+              <button onClick={() => setEditEvent(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
+              <button onClick={saveEditEvent} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Publication Modal ── */}
+      {editPubItem && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[540px] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-nasmed-gray-light">
+              <h3 className="font-heading text-[18px] font-bold text-nasmed-navy">Edit Publication</h3>
+              <button onClick={() => setEditPubItem(null)} className="text-nasmed-text-muted hover:text-nasmed-navy text-xl leading-none bg-transparent border-none cursor-pointer">✕</button>
+            </div>
+            <div className="px-6 py-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Title <span className="text-red-600">*</span></label>
+                <input type="text" value={epubTitle} onChange={e => setEpubTitle(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Type</label>
+                <select value={epubType} onChange={e => setEpubType(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue">
+                  <option>Guidelines</option>
+                  <option>Journal</option>
+                  <option>Protocol</option>
+                  <option>Research</option>
+                  <option>Newsletter</option>
+                  <option>Report</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Description / Abstract</label>
+                <textarea value={epubContent} onChange={e => setEpubContent(e.target.value)} rows={3} placeholder="Leave blank to keep existing description" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Access Type</label>
+                <div className="flex gap-3 flex-wrap">
+                  {[
+                    { value: "free", label: "Free", icon: "🔓" },
+                    { value: "paid", label: "Paid", icon: "💳" },
+                    { value: "subscribed", label: "Members Only", icon: "🔐" },
+                  ].map(opt => (
+                    <label key={opt.value} className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border-[1.5px] cursor-pointer transition-all ${epubAccess === opt.value ? "border-nasmed-mid-blue bg-nasmed-mid-blue/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue/40"}`}>
+                      <input type="radio" name="epubAccess" value={opt.value} checked={epubAccess === opt.value} onChange={() => setEpubAccess(opt.value)} className="accent-nasmed-mid-blue" />
+                      <span className="text-[13px] font-semibold text-nasmed-navy">{opt.icon} {opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {epubAccess === "paid" && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Price (₦)</label>
+                  <input type="text" value={epubPrice} onChange={e => setEpubPrice(e.target.value)} placeholder="e.g. 2500" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
+              <button onClick={() => setEditPubItem(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
+              <button onClick={saveEditPub} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
             </div>
           </div>
         </div>

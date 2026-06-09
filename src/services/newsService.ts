@@ -24,6 +24,8 @@ export interface NewsEvent {
   month_label: string;
   cta_text: string;
   cta_style: 'filled' | 'outline';
+  registration_fee: number;
+  body_content?: string;
   published: boolean;
 }
 
