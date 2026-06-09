@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import supabase from "@/lib/supabaseClient";
-import newsService, { NewsPost, NewsEvent } from "@/services/newsService";
+import newsService, { NewsPost, NewsEvent, Poster } from "@/services/newsService";
 import eventRegistrationService from "@/services/eventRegistrationService";
 import transactionService from "@/services/transactionService";
 const CATEGORIES = ["All", "Conference", "Research", "Update"];
@@ -27,8 +27,11 @@ const categoryIcon: Record<string, string> = {
 export default function NewsPage() {
   const [posts, setPosts] = useState<NewsPost[]>([]);
   const [events, setEvents] = useState<NewsEvent[]>([]);
+  const [posters, setPosters] = useState<Poster[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [loadingPosters, setLoadingPosters] = useState(true);
+  const [lightboxPoster, setLightboxPoster] = useState<Poster | null>(null);
   const [active, setActive] = useState("All");
   const [openModal, setOpenModal] = useState<string | null>(null);
 
@@ -60,16 +63,25 @@ export default function NewsPage() {
       .catch(() => toast.error("Could not load events."))
       .finally(() => setLoadingEvents(false));
 
+    newsService.getAllPosters()
+      .then(data => setPosters(data))
+      .catch(() => {})
+      .finally(() => setLoadingPosters(false));
+
     const postSub = newsService.subscribeToPostChanges(() => {
       newsService.getAllPosts().then(data => setPosts(data)).catch(() => {});
     });
     const eventSub = newsService.subscribeToEventChanges(() => {
       newsService.getAllEvents().then(data => setEvents(data)).catch(() => {});
     });
+    const posterSub = newsService.subscribeToPosterChanges(() => {
+      newsService.getAllPosters().then(data => setPosters(data)).catch(() => {});
+    });
 
     return () => {
       supabase.removeChannel(postSub);
       supabase.removeChannel(eventSub);
+      supabase.removeChannel(posterSub);
     };
   }, []);
 
@@ -353,6 +365,67 @@ export default function NewsPage() {
           </div>
         )}
       </section>
+
+      {/* ── Posters & Flyers ── */}
+      {(loadingPosters || posters.length > 0) && (
+        <section className="py-16 px-6 md:px-12 max-w-[1280px] mx-auto border-t border-nasmed-gray-light">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="block w-8 h-[2px] bg-nasmed-green" />
+            <span className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-green">Announcements</span>
+          </div>
+          <h2 className="font-heading text-[42px] font-bold text-nasmed-navy leading-tight mb-10">Posters & Flyers</h2>
+
+          {loadingPosters ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {[1, 2, 3, 4].map(i => <div key={i} className="aspect-[3/4] rounded-xl bg-nasmed-off-white animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+              {posters.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setLightboxPoster(p)}
+                  className="group rounded-xl overflow-hidden border border-nasmed-gray-light bg-white hover:shadow-xl hover:-translate-y-1 transition-all text-left"
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-nasmed-off-white">
+                    <img src={p.image_url} alt={p.title || "Poster"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  {(p.title || p.description) && (
+                    <div className="p-3">
+                      {p.title && <p className="text-[13px] font-semibold text-nasmed-navy leading-snug">{p.title}</p>}
+                      {p.description && <p className="text-[11px] text-nasmed-text-muted mt-1">{p.description}</p>}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Lightbox */}
+      {lightboxPoster && (
+        <div
+          className="fixed inset-0 bg-black/85 z-[3000] flex items-center justify-center p-4"
+          onClick={() => setLightboxPoster(null)}
+        >
+          <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setLightboxPoster(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white text-3xl leading-none border-none bg-transparent cursor-pointer"
+            >✕</button>
+            <img src={lightboxPoster.image_url} alt={lightboxPoster.title || "Poster"} className="w-full rounded-xl shadow-2xl" />
+            {(lightboxPoster.title || lightboxPoster.description) && (
+              <div className="mt-4 text-center">
+                {lightboxPoster.title && <p className="text-white font-semibold text-[15px]">{lightboxPoster.title}</p>}
+                {lightboxPoster.description && <p className="text-white/65 text-[13px] mt-1">{lightboxPoster.description}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Latest from NASMED ── */}
       <section className="py-16 px-6 md:px-12 max-w-[1280px] mx-auto border-t border-nasmed-gray-light">

@@ -29,6 +29,15 @@ export interface NewsEvent {
   published: boolean;
 }
 
+export interface Poster {
+  id: string;
+  created_at: string;
+  title?: string;
+  description?: string;
+  image_url: string;
+  published: boolean;
+}
+
 export const newsService = {
   async getAllPosts(): Promise<NewsPost[]> {
     const { data, error } = await supabase
@@ -118,6 +127,58 @@ export const newsService = {
       .delete()
       .eq('id', id);
     if (error) throw error;
+  },
+
+  async getAllPosters(): Promise<Poster[]> {
+    const { data, error } = await supabase
+      .from('posters')
+      .select('*')
+      .eq('published', true)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getAllPostersAdmin(): Promise<Poster[]> {
+    const { data, error } = await supabase
+      .from('posters')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createPoster(poster: Omit<Poster, 'id' | 'created_at'>, imageFile: File): Promise<Poster> {
+    const fileName = `${Date.now()}-${imageFile.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('posters')
+      .upload(fileName, imageFile);
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('posters').getPublicUrl(fileName);
+    const { data, error } = await supabase
+      .from('posters')
+      .insert({ ...poster, image_url: publicUrl })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updatePoster(id: string, updates: Partial<Omit<Poster, 'id' | 'created_at'>>): Promise<void> {
+    const { error } = await supabase.from('posters').update(updates).eq('id', id);
+    if (error) throw error;
+  },
+
+  async deletePoster(id: string): Promise<void> {
+    const { error } = await supabase.from('posters').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  subscribeToPosterChanges(callback: (payload: unknown) => void) {
+    return supabase
+      .channel('posters-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'posters' }, callback)
+      .subscribe();
   },
 
   subscribeToPostChanges(callback: (payload: unknown) => void) {

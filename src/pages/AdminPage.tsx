@@ -13,7 +13,7 @@ import applicationService, { Application } from "@/services/applicationService";
 import userService from "@/services/userService";
 import publicationService, { Publication } from "@/services/publicationService";
 import transactionService from "@/services/transactionService";
-import newsService, { NewsPost, NewsEvent } from "@/services/newsService";
+import newsService, { NewsPost, NewsEvent, Poster } from "@/services/newsService";
 import eventRegistrationService, { EventRegistration } from "@/services/eventRegistrationService";
 import subscriptionService, { Subscription as DbSubscription } from "@/services/subscriptionService";
 
@@ -244,6 +244,16 @@ export default function AdminPage() {
   const [evRegistrationFee, setEvRegistrationFee] = useState("0");
   const [evBodyContent, setEvBodyContent] = useState("");
 
+  // Posters state
+  const [posters, setPosters] = useState<Poster[]>([]);
+  const [posterTitle, setPosterTitle] = useState("");
+  const [posterDesc, setPosterDesc] = useState("");
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState<string | null>(null);
+  const [editPoster, setEditPoster] = useState<Poster | null>(null);
+  const [eposterTitle, setEposterTitle] = useState("");
+  const [eposterDesc, setEposterDesc] = useState("");
+
   const canAccess = localAuth || (!loading && isAdmin);
 
   const [approvedCreds, setApprovedCreds] = useState<{ name: string; username: string; nasmedEmail: string; memberNumber: string; password: string } | null>(null);
@@ -404,6 +414,7 @@ export default function AdminPage() {
       transactionService.getAll().then(data => setTransactions(data.map(d => toDisplayTxn(d as unknown as Record<string, unknown>)))).catch(() => {});
       newsService.getAllPostsAdmin().then(data => setNewsPosts(data)).catch(() => {});
       newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
+      newsService.getAllPostersAdmin().then(data => setPosters(data)).catch(() => {});
       eventRegistrationService.getAll().then(data => setEventRegistrations(data.map(toDisplayEventReg))).catch(() => {});
       subscriptionService.getAll().then(data => setDbSubscriptions(data)).catch(() => {});
     };
@@ -428,6 +439,9 @@ export default function AdminPage() {
     const eventSub = newsService.subscribeToEventChanges(() => {
       newsService.getAllEventsAdmin().then(data => setNewsEvents(data)).catch(() => {});
     });
+    const posterSub = newsService.subscribeToPosterChanges(() => {
+      newsService.getAllPostersAdmin().then(data => setPosters(data)).catch(() => {});
+    });
     const evRegSub = eventRegistrationService.subscribeToChanges(() => {
       eventRegistrationService.getAll().then(data => setEventRegistrations(data.map(toDisplayEventReg))).catch(() => {});
     });
@@ -444,6 +458,7 @@ export default function AdminPage() {
       supabase.removeChannel(eventSub);
       supabase.removeChannel(evRegSub);
       supabase.removeChannel(subSub);
+      supabase.removeChannel(posterSub);
     };
   }, [canAccess]);
 
@@ -1330,6 +1345,111 @@ export default function AdminPage() {
                 >Add Event →</button>
               </div>
 
+              {/* ── Posters ── */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">Upload Poster</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Title (optional)</label>
+                    <input type="text" value={posterTitle} onChange={e => setPosterTitle(e.target.value)} placeholder="e.g. Annual Conference 2025" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Caption (optional)</label>
+                    <input type="text" value={posterDesc} onChange={e => setPosterDesc(e.target.value)} placeholder="Short caption or context" className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue" />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Poster Image <span className="text-red-600">*</span></label>
+                    <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${posterFile ? "border-nasmed-green bg-nasmed-green/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:bg-nasmed-off-white"}`}>
+                      <span className="text-xl">{posterFile ? "🖼️" : "📁"}</span>
+                      <div className="flex-1 min-w-0">
+                        {posterFile
+                          ? <><p className="text-sm font-semibold text-nasmed-navy truncate">{posterFile.name}</p><p className="text-xs text-nasmed-text-muted">{(posterFile.size / 1024).toFixed(0)} KB</p></>
+                          : <><p className="text-sm text-nasmed-text-muted">Click to upload poster image</p><p className="text-xs text-nasmed-text-muted">JPG, PNG, WEBP up to 10MB</p></>
+                        }
+                      </div>
+                      {posterFile && <button type="button" onClick={e => { e.preventDefault(); setPosterFile(null); setPosterPreview(null); }} className="text-red-400 hover:text-red-600 text-lg leading-none border-none bg-transparent cursor-pointer">✕</button>}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                        const f = e.target.files?.[0] || null;
+                        setPosterFile(f);
+                        if (f) { const r = new FileReader(); r.onload = ev => setPosterPreview(ev.target?.result as string); r.readAsDataURL(f); }
+                        else setPosterPreview(null);
+                      }} />
+                    </label>
+                    {posterPreview && (
+                      <div className="mt-2 rounded-lg overflow-hidden border border-nasmed-gray-light w-full max-w-[320px]">
+                        <img src={posterPreview} alt="Poster preview" className="w-full object-contain max-h-[240px]" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!posterFile) { toast.error("Please select an image file."); return; }
+                    try {
+                      const poster = await newsService.createPoster({ title: posterTitle || undefined, description: posterDesc || undefined, published: true, image_url: "" }, posterFile);
+                      setPosters(prev => [poster, ...prev]);
+                      setPosterTitle(""); setPosterDesc(""); setPosterFile(null); setPosterPreview(null);
+                      toast.success("Poster uploaded!");
+                    } catch (err) { toast.error(`Failed to upload poster: ${(err as Error)?.message || err}`); }
+                  }}
+                  className="bg-nasmed-green text-white border-none py-3 px-8 rounded-lg text-[15px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all mt-5"
+                >Upload Poster →</button>
+              </div>
+
+              {/* Existing Posters */}
+              <div className="bg-white rounded-[14px] p-6 shadow-sm mb-8">
+                <h3 className="text-base font-bold text-nasmed-navy mb-5">All Posters ({posters.length})</h3>
+                {posters.length === 0 ? (
+                  <div className="text-center py-8 text-nasmed-text-muted text-[13px]">No posters uploaded yet.</div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {posters.map(p => (
+                      <div key={p.id} className="rounded-xl border border-nasmed-gray-light overflow-hidden bg-nasmed-off-white/40 flex flex-col">
+                        <div className="relative">
+                          <img src={p.image_url} alt={p.title || "Poster"} className="w-full object-cover aspect-[3/4]" />
+                          <span className={`absolute top-2 right-2 py-0.5 px-2 rounded-full text-[10px] font-bold ${p.published ? "bg-nasmed-green text-white" : "bg-amber-500 text-white"}`}>
+                            {p.published ? "Live" : "Hidden"}
+                          </span>
+                        </div>
+                        <div className="p-3 flex flex-col gap-1.5 flex-1">
+                          <p className="text-[13px] font-semibold text-nasmed-navy truncate">{p.title || <span className="text-nasmed-text-muted italic font-normal">No title</span>}</p>
+                          <p className="text-[11px] text-nasmed-text-muted truncate">{p.description || <span className="italic">No caption</span>}</p>
+                          <div className="flex gap-1.5 mt-auto pt-1">
+                            <button
+                              type="button"
+                              title="Edit title & caption"
+                              onClick={() => { setEditPoster(p); setEposterTitle(p.title || ""); setEposterDesc(p.description || ""); }}
+                              className="bg-nasmed-mid-blue text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80"
+                            >✏️</button>
+                            <button
+                              type="button"
+                              title={p.published ? "Hide from website" : "Show on website"}
+                              onClick={async () => {
+                                await newsService.updatePoster(p.id, { published: !p.published });
+                                setPosters(prev => prev.map(x => x.id === p.id ? { ...x, published: !x.published } : x));
+                              }}
+                              className={`flex-1 border-none py-1 px-2 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80 ${p.published ? "bg-amber-500 text-white" : "bg-nasmed-green text-white"}`}
+                            >{p.published ? "Hide" : "Show"}</button>
+                            <button
+                              type="button"
+                              title="Delete poster"
+                              onClick={async () => {
+                                if (!confirm("Delete this poster?")) return;
+                                await newsService.deletePoster(p.id);
+                                setPosters(prev => prev.filter(x => x.id !== p.id));
+                                toast.success("Poster deleted.");
+                              }}
+                              className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
+                            >🗑</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Existing Events */}
               <div className="bg-white rounded-[14px] p-6 shadow-sm">
                 <h3 className="text-base font-bold text-nasmed-navy mb-5">All Events ({newsEvents.length})</h3>
@@ -2093,6 +2213,59 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
               <button onClick={() => setEditEvent(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
               <button onClick={saveEditEvent} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Poster Modal ── */}
+      {editPoster && (
+        <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditPoster(null); }}>
+          <div className="bg-white rounded-2xl w-full max-w-[480px] shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-nasmed-gray-light">
+              <h3 className="font-heading text-nasmed-navy text-[16px] font-bold">Edit Poster</h3>
+              <button onClick={() => setEditPoster(null)} className="w-8 h-8 rounded-full border border-nasmed-gray-light bg-white text-nasmed-text-muted flex items-center justify-center text-lg cursor-pointer hover:bg-nasmed-off-white">✕</button>
+            </div>
+            <div className="p-6 flex gap-5">
+              <img src={editPoster.image_url} alt="Poster" className="w-24 h-32 object-cover rounded-lg border border-nasmed-gray-light flex-shrink-0" />
+              <div className="flex flex-col gap-4 flex-1">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Title</label>
+                  <input
+                    type="text"
+                    value={eposterTitle}
+                    onChange={e => setEposterTitle(e.target.value)}
+                    placeholder="e.g. Annual Conference 2025"
+                    className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[13px] font-semibold text-nasmed-navy">Caption</label>
+                  <textarea
+                    value={eposterDesc}
+                    onChange={e => setEposterDesc(e.target.value)}
+                    placeholder="Short caption or context shown below the poster"
+                    rows={3}
+                    className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-5 border-t border-nasmed-gray-light">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await newsService.updatePoster(editPoster.id, { title: eposterTitle || undefined, description: eposterDesc || undefined });
+                    setPosters(prev => prev.map(x => x.id === editPoster.id ? { ...x, title: eposterTitle || undefined, description: eposterDesc || undefined } : x));
+                    setEditPoster(null);
+                    toast.success("Poster updated.");
+                  } catch { toast.error("Failed to update poster."); }
+                }}
+                className="bg-nasmed-green text-white border-none py-2.5 px-6 rounded-lg text-[14px] font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+              >Save Changes</button>
+              <button type="button" onClick={() => setEditPoster(null)} className="bg-nasmed-gray-light text-nasmed-navy border-none py-2.5 px-5 rounded-lg text-[14px] font-semibold cursor-pointer hover:bg-gray-200 transition-all">Cancel</button>
             </div>
           </div>
         </div>
