@@ -47,6 +47,7 @@ export default function NewsPage() {
   const [bankReceiptUploading, setBankReceiptUploading] = useState(false);
   const [bankReceiptError, setBankReceiptError] = useState("");
   const [bankRefInput, setBankRefInput] = useState("");
+  const [bankSubmitting, setBankSubmitting] = useState(false);
 
   useEffect(() => {
     newsService.getAllPosts()
@@ -91,39 +92,61 @@ export default function NewsPage() {
     naira === 0 ? "FREE" : `₦${naira.toLocaleString("en-NG")}`;
 
   // ── Free registration ──
-  const handleFreeRegistration = (ev: NewsEvent) => {
+  const handleFreeRegistration = async (ev: NewsEvent) => {
     if (!name.trim() || !email.trim()) { toast.error("Please fill in your name and email."); return; }
-    eventRegistrationService.create({
-      event_id: ev.id,
-      event_title: ev.title,
-      full_name: name,
-      email,
-      organisation: org || undefined,
-      dues_status: "member",
-      registration_fee: 0,
-      payment_status: "free",
-      status: "pending",
-    }).catch(() => {});
-    closeModal();
-    toast.success(`Registration confirmed for ${name}! You will receive event details by email.`);
+    try {
+      await eventRegistrationService.create({
+        event_id: ev.id,
+        event_title: ev.title,
+        full_name: name,
+        email,
+        organisation: org || undefined,
+        dues_status: "member",
+        registration_fee: 0,
+        payment_status: "free",
+        status: "pending",
+      });
+      closeModal();
+      toast.success(`Registration confirmed for ${name}! You will receive event details by email.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Registration failed: ${msg}. Please contact info@nasmed.org.`);
+    }
   };
 
-  // ── Bank transfer receipt upload ──
-  const handleReceiptUpload = async (file: File, ev: NewsEvent) => {
+  // ── Bank transfer: upload receipt file only (no DB save yet) ──
+  const handleReceiptUpload = async (file: File) => {
     if (!name.trim() || !email.trim()) { toast.error("Please fill in your name and email first."); return; }
     setBankReceiptUploading(true);
     setBankReceiptError("");
+    setBankReceiptUrl("");
+    setBankReceiptName("");
     try {
       const ext = file.name.split(".").pop();
-      const ref = bankRefInput.trim() || `EVT-${Date.now()}`;
-      const fileName = `receipts/event-${ref}.${ext}`;
+      const slug = `${Date.now()}-${name.trim().replace(/\s+/g, "-").toLowerCase()}`;
+      const fileName = `event-receipts/${slug}.${ext}`;
       const { error: uploadErr } = await supabase.storage.from("receipts").upload(fileName, file, { upsert: true });
-      if (uploadErr) throw uploadErr;
+      if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
       const { data: { publicUrl } } = supabase.storage.from("receipts").getPublicUrl(fileName);
       setBankReceiptUrl(publicUrl);
       setBankReceiptName(file.name);
+      toast.success("Receipt attached. Now click Submit to complete your registration.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setBankReceiptError(msg);
+    } finally {
+      setBankReceiptUploading(false);
+    }
+  };
+
+  // ── Bank transfer: submit registration after receipt is attached ──
+  const handleBankSubmit = async (ev: NewsEvent) => {
+    if (!name.trim() || !email.trim()) { toast.error("Please fill in your name and email."); return; }
+    if (!bankReceiptUrl) { toast.error("Please upload your payment receipt first."); return; }
+    setBankSubmitting(true);
+    try {
       const fee = ev.registration_fee ?? 0;
-      // Save registration record — awaiting admin confirmation
+      const ref = bankRefInput.trim() || `EVT-${Date.now()}`;
       await eventRegistrationService.create({
         event_id: ev.id,
         event_title: ev.title,
@@ -136,9 +159,9 @@ export default function NewsPage() {
         payment_ref: ref,
         payment_method: "Bank Transfer",
         status: "pending",
-        notes: `Receipt: ${publicUrl}`,
+        notes: `Receipt: ${bankReceiptUrl}`,
       });
-      // Mirror to transactions table so admin Transactions page is complete
+      // Mirror to transactions (non-critical)
       transactionService.create({
         payment_ref: ref,
         member_name: name,
@@ -150,14 +173,16 @@ export default function NewsPage() {
         status: "awaiting_confirmation",
         type: "event_registration",
         description: `Event registration — ${ev.title}`,
-        receipt_url: publicUrl,
-        receipt_name: `Receipt – ${name}`,
+        receipt_url: bankReceiptUrl,
+        receipt_name: bankReceiptName || `Receipt – ${name}`,
       }).catch(() => {});
-      toast.success("Receipt uploaded! Admin will review and confirm your registration.");
-    } catch {
-      setBankReceiptError("Upload failed. Ensure a 'receipts' storage bucket exists in Supabase, or email your receipt to info@nasmed.org.");
+      toast.success("Registration submitted! Admin will confirm within 1–3 business days.");
+      closeModal();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Submission failed — ${msg}. Please contact info@nasmed.org.`);
     } finally {
-      setBankReceiptUploading(false);
+      setBankSubmitting(false);
     }
   };
 
@@ -496,46 +521,30 @@ export default function NewsPage() {
                         </div>
 
                         {/* Receipt upload */}
-                        {!bankReceiptUrl ? (
-                          <div className="flex flex-col gap-1.5">
-                            <label className={lbl}>Upload Payment Receipt <span className="text-red-600">*</span></label>
-                            <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all ${bankReceiptUploading ? "border-nasmed-gray-light opacity-60 cursor-not-allowed" : "border-nasmed-mid-blue/40 hover:border-nasmed-mid-blue hover:bg-nasmed-mid-blue/5"}`}>
-                              <span className="text-2xl">{bankReceiptUploading ? "⏳" : "📤"}</span>
-                              <span className="text-[13px] font-semibold text-nasmed-mid-blue">
-                                {bankReceiptUploading ? "Uploading…" : "Click to upload receipt"}
-                              </span>
-                              <span className="text-[11px] text-nasmed-text-muted">PDF, JPG or PNG</span>
-                              <input
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                className="hidden"
-                                disabled={bankReceiptUploading}
-                                onChange={e => {
-                                  const file = e.target.files?.[0];
-                                  if (file) handleReceiptUpload(file, ev);
-                                }}
-                              />
-                            </label>
-                            {bankReceiptError && (
-                              <p className="text-[12px] text-red-500">{bankReceiptError}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3 bg-nasmed-green/10 border-2 border-nasmed-green/40 rounded-xl p-4">
-                            <span className="text-2xl">📄</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[14px] font-bold text-nasmed-green">Receipt Uploaded — {bankReceiptName}</p>
-                              <p className="text-[12px] text-nasmed-green/80">Admin will review and confirm your registration within 1–3 business days.</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={closeModal}
-                              className="bg-nasmed-green text-white border-none py-2 px-4 rounded-lg text-[13px] font-bold cursor-pointer hover:bg-nasmed-green-light transition-all whitespace-nowrap"
-                            >
-                              Done ✓
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex flex-col gap-1.5">
+                          <label className={lbl}>Attach Payment Receipt <span className="text-red-600">*</span></label>
+                          <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-5 cursor-pointer transition-all ${bankReceiptUploading ? "border-nasmed-gray-light opacity-60 cursor-not-allowed" : bankReceiptUrl ? "border-nasmed-green bg-nasmed-green/5" : "border-nasmed-mid-blue/40 hover:border-nasmed-mid-blue hover:bg-nasmed-mid-blue/5"}`}>
+                            <span className="text-2xl">{bankReceiptUploading ? "⏳" : bankReceiptUrl ? "✅" : "📎"}</span>
+                            <span className="text-[13px] font-semibold text-nasmed-mid-blue">
+                              {bankReceiptUploading ? "Uploading…" : bankReceiptUrl ? `${bankReceiptName} — click to replace` : "Click to attach receipt"}
+                            </span>
+                            {!bankReceiptUrl && <span className="text-[11px] text-nasmed-text-muted">PDF, JPG or PNG — max 10 MB</span>}
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="hidden"
+                              disabled={bankReceiptUploading || bankSubmitting}
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) handleReceiptUpload(file);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          {bankReceiptError && (
+                            <p className="text-[12px] text-red-500">⚠️ {bankReceiptError}</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -558,7 +567,17 @@ export default function NewsPage() {
                 )}
                 {!isFree && !paymentMethod && (
                   <button type="button" disabled className="bg-nasmed-gray-light text-nasmed-text-muted border-none py-3.5 rounded-lg text-[15px] font-bold cursor-not-allowed opacity-60">
-                    Click bank transfer above to pay
+                    🔒 Select payment method above to continue
+                  </button>
+                )}
+                {!isFree && paymentMethod === "bank" && (
+                  <button
+                    type="button"
+                    disabled={!bankReceiptUrl || !name.trim() || !email.trim() || bankSubmitting || bankReceiptUploading}
+                    onClick={() => handleBankSubmit(ev)}
+                    className="bg-nasmed-green text-white border-none py-3.5 rounded-lg text-[15px] font-bold cursor-pointer hover:bg-nasmed-green-light transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bankSubmitting ? "Submitting…" : !name.trim() || !email.trim() ? "🔒 Fill in name & email above" : !bankReceiptUrl ? "🔒 Attach receipt above to submit" : "Submit Registration →"}
                   </button>
                 )}
               </div>

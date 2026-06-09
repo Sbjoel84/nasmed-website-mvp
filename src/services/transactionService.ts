@@ -54,6 +54,14 @@ export const transactionService = {
     if (error) throw error;
   },
 
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   subscribeToChanges(callback: (payload: unknown) => void) {
     return supabase
       .channel('transactions-changes')

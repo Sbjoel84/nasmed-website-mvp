@@ -208,6 +208,8 @@ export default function AdminPage() {
     : "No confirmed payments yet";
 
   const [viewApp, setViewApp] = useState<DisplayApp | null>(null);
+  const [viewTxn, setViewTxn] = useState<DisplayTxn | null>(null);
+  const [deletingTxnId, setDeletingTxnId] = useState<string | null>(null);
   const [afFname, setAfFname] = useState("");
   const [afLname, setAfLname] = useState("");
   const [afEmail, setAfEmail] = useState("");
@@ -583,6 +585,25 @@ export default function AdminPage() {
     } catch {
       toast.error("Failed to confirm transaction.");
     }
+  };
+
+  const handleDeleteTransaction = async (id: string, memberName: string) => {
+    setDeletingTxnId(id);
+  };
+
+  const txnEmailSubject = (txn: DisplayTxn, type: "approve" | "reject" | "followup") => {
+    if (type === "approve") return encodeURIComponent(`NASMED Payment Confirmed — Ref: ${txn.ref || "N/A"}`);
+    if (type === "reject") return encodeURIComponent(`Re: NASMED Payment Submission — Action Required`);
+    return encodeURIComponent(`NASMED Payment Follow-up — Ref: ${txn.ref || "N/A"}`);
+  };
+
+  const txnEmailBody = (txn: DisplayTxn, type: "approve" | "reject" | "followup") => {
+    const name = txn.member || "Member";
+    const amount = `${txn.amount} ${txn.currency}`;
+    const ref = txn.ref || "N/A";
+    if (type === "approve") return encodeURIComponent(`Dear ${name},\n\nWe are pleased to confirm that your payment of ${amount} (Reference: ${ref}) has been successfully verified and approved.\n\nYour NASMED account will be updated accordingly. Thank you for your prompt payment.\n\nBest regards,\nNASMED Secretariat`);
+    if (type === "reject") return encodeURIComponent(`Dear ${name},\n\nThank you for submitting your payment of ${amount} (Reference: ${ref}).\n\nUnfortunately, we were unable to verify this payment. This may be due to:\n- Incorrect account details used\n- Payment amount discrepancy\n- Receipt not matching our records\n\nPlease review and resubmit your payment or contact us for assistance.\n\nBest regards,\nNASMED Secretariat`);
+    return encodeURIComponent(`Dear ${name},\n\nWe are following up on your payment of ${amount} (Reference: ${ref}).\n\nPlease ensure you have uploaded a valid receipt for verification.\n\nBest regards,\nNASMED Secretariat`);
   };
 
   const deleteMember = async (dbId: string) => {
@@ -1558,16 +1579,31 @@ export default function AdminPage() {
                               </td>
                               <td className="py-3 px-3 text-[12px] text-nasmed-text-muted whitespace-nowrap">{t.date || "—"}</td>
                               <td className="py-3 px-3">
-                                {t.status === "awaiting_confirmation" ? (
+                                <div className="flex gap-1.5 items-center flex-wrap">
+                                  {/* Preview */}
                                   <button
-                                    onClick={() => handleConfirmTransaction(t.id)}
-                                    className="bg-nasmed-green text-white border-none py-1.5 px-3 rounded-lg text-[11px] font-bold cursor-pointer hover:bg-nasmed-green-light whitespace-nowrap"
-                                  >
-                                    ✓ Confirm
-                                  </button>
-                                ) : (
-                                  <span className="text-[11px] text-nasmed-text-muted">—</span>
-                                )}
+                                    type="button"
+                                    onClick={() => setViewTxn(t)}
+                                    className="bg-nasmed-mid-blue text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80"
+                                    title="Preview record"
+                                  >👁 View</button>
+                                  {/* Confirm */}
+                                  {t.status === "awaiting_confirmation" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleConfirmTransaction(t.id)}
+                                      className="bg-nasmed-green text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green-light whitespace-nowrap"
+                                      title="Confirm payment"
+                                    >✓</button>
+                                  )}
+                                  {/* Delete */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteTransaction(t.id, t.member)}
+                                    className="bg-red-500 text-white border-none py-1 px-2 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
+                                    title="Delete record"
+                                  >🗑</button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1730,6 +1766,174 @@ export default function AdminPage() {
               >
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transaction Preview Modal ── */}
+      {viewTxn && (
+        <div className="fixed inset-0 bg-black/65 z-[3500] flex items-center justify-center p-4 overflow-y-auto" onClick={e => { if (e.target === e.currentTarget) setViewTxn(null); }}>
+          <div className="bg-white rounded-2xl w-full max-w-[620px] my-6 shadow-2xl overflow-hidden flex flex-col">
+
+            {/* Header */}
+            <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue p-6 relative">
+              <button type="button" onClick={() => setViewTxn(null)} className="absolute top-4 right-5 bg-white/15 border-none text-white w-8 h-8 rounded-full text-lg cursor-pointer flex items-center justify-center hover:bg-white/25">✕</button>
+              <span className="inline-block bg-nasmed-green/25 text-nasmed-green-light text-[11px] font-bold tracking-[1.5px] uppercase py-1 px-3 rounded mb-3">💰 Payment Record</span>
+              <h2 className="font-heading text-white text-[20px]">{viewTxn.member || "—"}</h2>
+              <p className="text-white/65 text-[13px] mt-1">{viewTxn.email}</p>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 flex flex-col gap-5 overflow-y-auto">
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-[13px]">
+                {[
+                  { label: "Amount",         value: `${viewTxn.amount} ${viewTxn.currency}` },
+                  { label: "Payment Method", value: viewTxn.method || "—" },
+                  { label: "Reference",      value: viewTxn.ref || "—" },
+                  { label: "Date",           value: viewTxn.date || "—" },
+                  { label: "Category",       value: viewTxn.type === "event_registration" ? "Event Registration" : viewTxn.type === "contribution" ? "Contribution" : "Membership" },
+                  { label: "Tier / Event",   value: viewTxn.tier || "—" },
+                ].map(row => (
+                  <div key={row.label}>
+                    <p className="text-[11px] font-bold text-nasmed-text-muted uppercase tracking-wide mb-0.5">{row.label}</p>
+                    <p className="font-semibold text-nasmed-navy break-all">{row.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-nasmed-text-muted uppercase tracking-wide">Status:</span>
+                {statusBadge(viewTxn.status === "confirmed" ? "approved" : viewTxn.status === "awaiting_confirmation" ? "pending" : viewTxn.status)}
+              </div>
+
+              {/* Description */}
+              {viewTxn.description && (
+                <div className="bg-nasmed-off-white rounded-xl px-4 py-3 text-[13px] text-nasmed-text-muted">
+                  <span className="font-semibold text-nasmed-navy">Note: </span>{viewTxn.description}
+                </div>
+              )}
+
+              {/* Receipt section */}
+              <div>
+                <p className="text-[12px] font-bold text-nasmed-navy uppercase tracking-wide mb-2">Payment Receipt</p>
+                {viewTxn.receiptUrl ? (
+                  <div className="border-2 border-nasmed-green/40 rounded-xl overflow-hidden bg-nasmed-green/5">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-nasmed-green/20">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{/\.pdf$/i.test(viewTxn.receiptName || "") ? "📋" : "🖼️"}</span>
+                        <div>
+                          <p className="text-[13px] font-semibold text-nasmed-green">✓ Receipt Attached</p>
+                          <p className="text-[11px] text-nasmed-text-muted truncate max-w-[260px]">{viewTxn.receiptName || "receipt"}</p>
+                        </div>
+                      </div>
+                      <a
+                        href={viewTxn.receiptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[12px] font-semibold text-nasmed-mid-blue bg-nasmed-mid-blue/10 hover:bg-nasmed-mid-blue/20 py-1.5 px-3 rounded-lg transition-colors"
+                      >
+                        {/\.pdf$/i.test(viewTxn.receiptName || "") ? "Open PDF ↗" : "Full Size ↗"}
+                      </a>
+                    </div>
+                    {/\.(jpg|jpeg|png|gif|webp)$/i.test(viewTxn.receiptName || viewTxn.receiptUrl || "") && (
+                      <div className="p-3 bg-white">
+                        <img src={viewTxn.receiptUrl} alt="Payment receipt" className="w-full max-h-64 object-contain rounded-lg border border-nasmed-gray-light" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border-2 border-red-200 rounded-xl px-4 py-3 bg-red-50 flex items-center gap-3">
+                    <span className="text-xl">⚠️</span>
+                    <div>
+                      <p className="text-[13px] font-semibold text-red-700">No Receipt Attached</p>
+                      <p className="text-[11px] text-red-500">Member has not uploaded a proof of payment. Consider sending a follow-up email.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer actions */}
+            <div className="px-6 py-4 border-t border-nasmed-gray-light bg-nasmed-off-white flex flex-wrap gap-2 justify-between items-center">
+              <div className="flex flex-wrap gap-2">
+                {viewTxn.status === "awaiting_confirmation" && (
+                  <button
+                    type="button"
+                    onClick={async () => { await handleConfirmTransaction(viewTxn.id); setViewTxn(prev => prev ? { ...prev, status: "confirmed" } : null); }}
+                    className="bg-nasmed-green text-white border-none py-2 px-4 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-nasmed-green-light"
+                  >✓ Approve Payment</button>
+                )}
+                {viewTxn.status === "awaiting_confirmation" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await transactionService.updateStatus(viewTxn.id, "rejected");
+                        setTransactions(prev => prev.map(t => t.id === viewTxn.id ? { ...t, status: "rejected" } : t));
+                        setViewTxn(prev => prev ? { ...prev, status: "rejected" } : null);
+                        toast.success("Payment rejected.");
+                      } catch { toast.error("Failed to update status."); }
+                    }}
+                    className="bg-red-500 text-white border-none py-2 px-4 rounded-lg text-[13px] font-semibold cursor-pointer hover:bg-red-600"
+                  >✗ Reject</button>
+                )}
+                <a
+                  href={`mailto:${viewTxn.email}?subject=${txnEmailSubject(viewTxn, "approve")}&body=${txnEmailBody(viewTxn, "approve")}`}
+                  className="bg-nasmed-mid-blue text-white py-2 px-4 rounded-lg text-[13px] font-semibold hover:opacity-80 transition-opacity no-underline inline-block"
+                >✉ Approval Email</a>
+                <a
+                  href={`mailto:${viewTxn.email}?subject=${txnEmailSubject(viewTxn, "reject")}&body=${txnEmailBody(viewTxn, "reject")}`}
+                  className="bg-amber-500 text-white py-2 px-4 rounded-lg text-[13px] font-semibold hover:opacity-80 transition-opacity no-underline inline-block"
+                >✉ Rejection Email</a>
+                {!viewTxn.receiptUrl && (
+                  <a
+                    href={`mailto:${viewTxn.email}?subject=${txnEmailSubject(viewTxn, "followup")}&body=${txnEmailBody(viewTxn, "followup")}`}
+                    className="bg-purple-500 text-white py-2 px-4 rounded-lg text-[13px] font-semibold hover:opacity-80 transition-opacity no-underline inline-block"
+                  >✉ Follow-up Email</a>
+                )}
+              </div>
+              <button type="button" onClick={() => setViewTxn(null)} className="bg-transparent border border-nasmed-gray-light text-nasmed-text-muted py-2 px-4 rounded-lg text-[13px] cursor-pointer hover:border-nasmed-mid-blue hover:text-nasmed-mid-blue">Close</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Transaction Confirmation ── */}
+      {deletingTxnId && (
+        <div className="fixed inset-0 bg-black/60 z-[4000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[420px] shadow-2xl overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="text-4xl mb-3">🗑️</div>
+              <h3 className="font-heading text-nasmed-navy text-[18px] font-bold mb-2">Delete Payment Record?</h3>
+              <p className="text-nasmed-text-muted text-[13px] mb-5">This will permanently remove the record and cannot be undone.</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletingTxnId(null)}
+                  className="flex-1 py-2.5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[13px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white"
+                >Cancel</button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const id = deletingTxnId;
+                    setDeletingTxnId(null);
+                    try {
+                      await transactionService.delete(id);
+                      setTransactions(prev => prev.filter(x => x.id !== id));
+                      if (viewTxn?.id === id) setViewTxn(null);
+                      toast.success("Record deleted.");
+                    } catch (err) {
+                      toast.error(`Delete failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+                    }
+                  }}
+                  className="flex-1 py-2.5 rounded-lg bg-red-500 text-white border-none text-[13px] font-bold cursor-pointer hover:bg-red-600"
+                >Delete</button>
+              </div>
             </div>
           </div>
         </div>
