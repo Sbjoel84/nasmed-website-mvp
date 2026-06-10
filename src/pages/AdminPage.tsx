@@ -51,7 +51,8 @@ interface DisplayTxn {
 interface DisplayEventReg {
   id: string; eventTitle: string; name: string; email: string;
   organisation: string; duesStatus: string; fee: string;
-  paymentStatus: string; paymentRef: string; status: string; date: string;
+  paymentStatus: string; paymentRef: string; paymentMethod: string;
+  status: string; date: string; receiptUrl: string; notes: string;
 }
 
 function toDisplayApp(a: Application): DisplayApp {
@@ -132,6 +133,7 @@ function toDisplayTxn(t: Record<string, unknown>): DisplayTxn {
 }
 
 function toDisplayEventReg(r: EventRegistration): DisplayEventReg {
+  const receiptUrl = r.notes?.startsWith("Receipt: ") ? r.notes.slice("Receipt: ".length).trim() : "";
   return {
     id: r.id,
     eventTitle: r.event_title,
@@ -142,8 +144,11 @@ function toDisplayEventReg(r: EventRegistration): DisplayEventReg {
     fee: r.registration_fee === 0 ? "Free" : `₦${r.registration_fee.toLocaleString("en-NG")}`,
     paymentStatus: r.payment_status,
     paymentRef: r.payment_ref || "—",
+    paymentMethod: r.payment_method || "—",
     status: r.status,
     date: new Date(r.created_at).toLocaleDateString("en-GB"),
+    receiptUrl,
+    notes: r.notes || "",
   };
 }
 
@@ -175,11 +180,14 @@ export default function AdminPage() {
   const [localErr, setLocalErr] = useState("");
 
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [applications, setApplications] = useState<DisplayApp[]>([]);
   const [members, setMembers] = useState<DisplayMember[]>([]);
   const [publications, setPublications] = useState<DisplayPub[]>([]);
   const [transactions, setTransactions] = useState<DisplayTxn[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<DisplayEventReg[]>([]);
+  const [viewRegModal, setViewRegModal] = useState<DisplayEventReg | null>(null);
+  const [regReplyText, setRegReplyText] = useState("");
   const [dbSubscriptions, setDbSubscriptions] = useState<DbSubscription[]>([]);
   const [appsTab, setAppsTab] = useState<"membership" | "events">("membership");
   const [search, setSearch] = useState("");
@@ -634,6 +642,20 @@ export default function AdminPage() {
     return encodeURIComponent(`Dear ${name},\n\nWe are following up on your payment of ${amount} (Reference: ${ref}).\n\nPlease ensure you have uploaded a valid receipt for verification.\n\nBest regards,\nNASMED Secretariat`);
   };
 
+  const regEmailTemplates = {
+    missingReceipt: (r: DisplayEventReg) =>
+      `Dear ${r.name},\n\nThank you for registering for ${r.eventTitle}.\n\nWe noticed that your registration (Reference: ${r.paymentRef}) does not have a proof of payment attached. To complete your registration, please log in and upload your payment receipt at:\n\nhttps://nasmed.ng/news\n\nBank Details:\nBank: Union Bank\nAccount Name: Nigerian Association of Sports Medicine\nAccount Number: 0227297914\n\nRegistration Fee: ${r.fee}\n\nPlease upload your receipt as soon as possible so we can confirm your spot.\n\nFor assistance, contact us at info@nasmed.org.\n\nBest regards,\nNASMED Secretariat`,
+
+    notApproved: (r: DisplayEventReg) =>
+      `Dear ${r.name},\n\nThank you for your interest in ${r.eventTitle}.\n\nAfter reviewing your registration, we are unable to approve it at this time. This may be due to one of the following reasons:\n- Proof of payment not attached\n- Payment amount does not match the required fee (${r.fee})\n- Payment reference could not be verified\n- Incomplete registration details\n\nPlease review the above, make the necessary corrections, and resubmit your registration at nasmed.ng/news.\n\nIf you believe this is an error, please contact us at info@nasmed.org with your payment reference and we will assist you.\n\nWe apologise for any inconvenience.\n\nBest regards,\nNASMED Secretariat`,
+
+    approved: (r: DisplayEventReg) =>
+      `Dear ${r.name},\n\nWe are pleased to confirm that your registration for ${r.eventTitle} has been successfully verified and approved.\n\nYour participation is confirmed. Event access details (Zoom link, agenda, etc.) will be sent to you closer to the event date.\n\nThank you for registering, and we look forward to your active participation.\n\nBest regards,\nNASMED Secretariat`,
+
+    followUp: (r: DisplayEventReg) =>
+      `Dear ${r.name},\n\nThis is a follow-up regarding your registration for ${r.eventTitle} (Reference: ${r.paymentRef}).\n\nYour registration is currently pending and requires attention before it can be processed.\n\nPlease take the necessary action and revert to us at info@nasmed.org at your earliest convenience.\n\nThank you.\n\nBest regards,\nNASMED Secretariat`,
+  };
+
   const deleteMember = async (dbId: string) => {
     if (confirm("Are you sure you want to delete this member?")) {
       try {
@@ -753,35 +775,61 @@ export default function AdminPage() {
 
   return (
     <div className="pt-[78px] bg-nasmed-off-white min-h-screen">
-      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] min-h-[calc(100vh-78px)]">
+      <div className="flex min-h-[calc(100vh-78px)]">
 
         {/* Sidebar */}
-        <div className="bg-nasmed-navy py-7 hidden md:block">
-          <div className="px-6 pb-6 border-b border-white/10">
-            <h3 className="text-white text-[15px] font-bold">NASMED Admin</h3>
-            <p className="text-white/40 text-xs mt-0.5">Management Portal</p>
+        <div
+          className={`bg-nasmed-navy hidden md:flex flex-col flex-shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out ${sidebarCollapsed ? "w-[64px]" : "w-[240px]"}`}
+        >
+          {/* Header + toggle */}
+          <div className={`flex items-center border-b border-white/10 py-5 flex-shrink-0 ${sidebarCollapsed ? "justify-center px-3" : "justify-between px-5"}`}>
+            {!sidebarCollapsed && (
+              <div className="overflow-hidden whitespace-nowrap">
+                <h3 className="text-white text-[14px] font-bold leading-tight">NASMED Admin</h3>
+                <p className="text-white/40 text-[11px] mt-0.5">Management Portal</p>
+              </div>
+            )}
+            <button
+              type="button"
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setSidebarCollapsed(v => !v)}
+              className="w-7 h-7 rounded-lg bg-white/10 border-none text-white cursor-pointer flex items-center justify-center hover:bg-white/25 transition-colors flex-shrink-0 text-[13px]"
+            >
+              {sidebarCollapsed ? "»" : "«"}
+            </button>
           </div>
-          <ul className="list-none py-4">
+
+          {/* Nav items */}
+          <ul className="list-none py-3 flex-1">
             {sidebarItems.map(item => (
               <li key={item.key}>
                 <button
+                  type="button"
+                  title={sidebarCollapsed ? item.label : undefined}
                   onClick={() => { setActiveSection(item.key); setSearch(""); }}
-                  className={`w-full flex items-center gap-2.5 py-2.5 px-6 text-[13.5px] font-medium cursor-pointer transition-all border-none bg-transparent text-left ${activeSection === item.key ? "bg-white/10 text-white border-l-[3px] border-nasmed-green-light" : "text-white/65 hover:bg-white/5 hover:text-white"}`}
+                  className={`w-full flex items-center py-2.5 cursor-pointer transition-all border-none bg-transparent text-left whitespace-nowrap ${sidebarCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-5"} text-[13px] font-medium ${activeSection === item.key ? "bg-white/10 text-white border-l-[3px] border-nasmed-green-light" : "text-white/60 hover:bg-white/5 hover:text-white"}`}
                 >
-                  <span className="text-base w-5 text-center">{item.icon}</span>{item.label}
+                  <span className="text-[16px] w-5 text-center flex-shrink-0">{item.icon}</span>
+                  {!sidebarCollapsed && <span className="overflow-hidden">{item.label}</span>}
                 </button>
               </li>
             ))}
             <li>
-              <button onClick={() => { sessionStorage.removeItem("nasmed_admin"); setLocalAuth(false); if (user) signOut(); }} className="w-full flex items-center gap-2.5 py-2.5 px-6 text-white/65 text-[13.5px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white mt-8">
-                <span className="text-base w-5 text-center">🚪</span>Sign Out
+              <button
+                type="button"
+                title={sidebarCollapsed ? "Sign Out" : undefined}
+                onClick={() => { sessionStorage.removeItem("nasmed_admin"); setLocalAuth(false); if (user) signOut(); }}
+                className={`w-full flex items-center py-2.5 text-white/60 text-[13px] font-medium cursor-pointer border-none bg-transparent text-left hover:bg-white/5 hover:text-white transition-colors mt-6 whitespace-nowrap ${sidebarCollapsed ? "justify-center px-0 gap-0" : "gap-2.5 px-5"}`}
+              >
+                <span className="text-[16px] w-5 text-center flex-shrink-0">🚪</span>
+                {!sidebarCollapsed && <span>Sign Out</span>}
               </button>
             </li>
           </ul>
         </div>
 
         {/* Content */}
-        <div className="p-6 md:p-9">
+        <div className="flex-1 min-w-0 p-6 md:p-9 overflow-x-hidden">
 
           {/* ── Dashboard ── */}
           {activeSection === "dashboard" && (
@@ -953,38 +1001,46 @@ export default function AdminPage() {
 
               {/* ── Event Registrations Tab ── */}
               {appsTab === "events" && (
-                <div className="bg-white rounded-[14px] p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-5">
+                <div className="bg-white rounded-[14px] p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
                     <h3 className="text-base font-bold text-nasmed-navy">All Event Registrations</h3>
-                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-2 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[220px] focus:border-nasmed-mid-blue" placeholder="Search by name, email, event..." />
+                    <input value={search} onChange={e => setSearch(e.target.value)} className="py-1.5 px-3 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] outline-none w-[200px] focus:border-nasmed-mid-blue" placeholder="Search name, email…" />
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                  <div className="overflow-x-auto rounded-xl border border-nasmed-gray-light">
+                    <table className="border-collapse" style={{ minWidth: "700px", width: "100%" }}>
                       <thead>
-                        <tr>
-                          {["Name", "Email", "Organisation", "Event", "Date", "Dues Status", "Fee", "Payment", "Status", "Actions"].map(h => (
-                            <th key={h} className="text-left py-2.5 px-3 text-xs font-semibold text-nasmed-text-muted tracking-wide uppercase border-b-2 border-nasmed-gray-light whitespace-nowrap">{h}</th>
+                        <tr className="bg-nasmed-off-white">
+                          {["Name", "Event", "Dues", "Fee", "Payment", "Status", "Actions"].map(h => (
+                            <th key={h} className="text-left py-2 px-2.5 text-[11px] font-semibold text-nasmed-text-muted tracking-wide uppercase border-b border-nasmed-gray-light whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {(filterRows(eventRegistrations, ["name", "email", "eventTitle", "organisation"]) as DisplayEventReg[]).map(r => (
                           <tr key={r.id} className="hover:bg-nasmed-off-white border-b border-nasmed-gray-light/30 last:border-0">
-                            <td className="py-3 px-3 text-[13px] font-semibold whitespace-nowrap">{r.name}</td>
-                            <td className="py-3 px-3 text-[13px]">{r.email}</td>
-                            <td className="py-3 px-3 text-[13px]">{r.organisation}</td>
-                            <td className="py-3 px-3 text-[13px] max-w-[180px] truncate" title={r.eventTitle}>{r.eventTitle}</td>
-                            <td className="py-3 px-3 text-[13px] whitespace-nowrap">{r.date}</td>
-                            <td className="py-3 px-3 text-[13px] whitespace-nowrap">
-                              <span className={`py-1 px-2 rounded-full text-[11px] font-bold ${r.duesStatus === "Paid-up member" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-amber-500/15 text-amber-600"}`}>
-                                {r.duesStatus}
+                            <td className="py-2.5 px-2.5 text-[12px]">
+                              <div className="font-semibold text-nasmed-navy leading-tight">{r.name}</div>
+                              <div className="text-nasmed-text-muted text-[11px] truncate max-w-[140px]">{r.email}</div>
+                            </td>
+                            <td className="py-2.5 px-2.5 text-[12px] max-w-[160px]">
+                              <div className="truncate text-nasmed-navy" title={r.eventTitle}>{r.eventTitle}</div>
+                              <div className="text-nasmed-text-muted text-[11px]">{r.date}</div>
+                            </td>
+                            <td className="py-2.5 px-2.5">
+                              <span className={`py-0.5 px-2 rounded-full text-[10px] font-bold whitespace-nowrap ${r.duesStatus === "Paid-up member" ? "bg-nasmed-green/15 text-nasmed-green" : "bg-amber-500/15 text-amber-600"}`}>
+                                {r.duesStatus === "Paid-up member" ? "Member" : "Non-dues"}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-[13px] font-semibold whitespace-nowrap">{r.fee}</td>
-                            <td className="py-3 px-3">{statusBadge(r.paymentStatus)}</td>
-                            <td className="py-3 px-3">{statusBadge(r.status)}</td>
-                            <td className="py-3 px-3">
-                              <div className="flex gap-1.5 items-center">
+                            <td className="py-2.5 px-2.5 text-[12px] font-semibold whitespace-nowrap">{r.fee}</td>
+                            <td className="py-2.5 px-2.5">{statusBadge(r.paymentStatus)}</td>
+                            <td className="py-2.5 px-2.5">{statusBadge(r.status)}</td>
+                            <td className="py-2.5 px-2.5">
+                              <div className="flex gap-1 items-center flex-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => { setViewRegModal(r); setRegReplyText(""); }}
+                                  className="bg-nasmed-mid-blue text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:opacity-80"
+                                >👁 View</button>
                                 {r.status === "pending" && (
                                   <>
                                     <button
@@ -1004,17 +1060,16 @@ export default function AdminPage() {
                                         toast.success(`Registration cancelled for ${r.name}`);
                                       }}
                                       className="bg-red-500 text-white border-none py-1 px-2.5 rounded text-[11px] font-semibold cursor-pointer hover:bg-red-600"
-                                    >✗</button>
+                                    >✗ Cancel</button>
                                   </>
-                                )}
-                                {r.paymentRef !== "—" && (
-                                  <span className="text-[10px] font-mono text-nasmed-text-muted" title={`Ref: ${r.paymentRef}`}>Ref: {r.paymentRef.slice(0, 10)}…</span>
                                 )}
                               </div>
                             </td>
                           </tr>
                         ))}
                       </tbody>
+                    </table>
+                    </tbody>
                     </table>
                     {eventRegistrations.length === 0 && (
                       <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No event registrations yet.</div>
@@ -2290,6 +2345,203 @@ export default function AdminPage() {
             <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">
               <button onClick={() => setEditEvent(null)} className="py-2.5 px-5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white">Cancel</button>
               <button onClick={saveEditEvent} className="flex-1 py-2.5 rounded-lg bg-nasmed-green text-white border-none text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Event Registration Detail Modal ── */}
+      {viewRegModal && (
+        <div
+          className="fixed inset-0 bg-black/65 z-[300] flex items-start justify-center p-5 overflow-y-auto"
+          onClick={e => { if (e.target === e.currentTarget) setViewRegModal(null); }}
+        >
+          <div className="bg-white rounded-2xl w-full max-w-[580px] my-8 shadow-2xl overflow-hidden">
+
+            {/* Header */}
+            <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue px-7 py-5 flex items-start justify-between">
+              <div>
+                <span className="inline-block bg-nasmed-green/25 text-nasmed-green-light text-[11px] font-bold tracking-[1.5px] uppercase py-1 px-3 rounded mb-2">Registration Details</span>
+                <h3 className="font-heading text-white text-[18px] leading-snug">{viewRegModal.eventTitle}</h3>
+              </div>
+              <button onClick={() => setViewRegModal(null)} className="bg-white/15 border-none text-white w-8 h-8 rounded-full text-lg cursor-pointer flex items-center justify-center hover:bg-white/25 flex-shrink-0 mt-1">✕</button>
+            </div>
+
+            <div className="p-7 flex flex-col gap-5">
+
+              {/* Status badges */}
+              <div className="flex gap-2 flex-wrap">
+                {statusBadge(viewRegModal.status)}
+                {statusBadge(viewRegModal.paymentStatus)}
+              </div>
+
+              {/* Registrant info */}
+              <div className="bg-nasmed-off-white rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Full Name</p>
+                  <p className="text-[14px] font-semibold text-nasmed-navy">{viewRegModal.name}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Email</p>
+                  <p className="text-[14px] text-nasmed-navy break-all">{viewRegModal.email}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Organisation</p>
+                  <p className="text-[14px] text-nasmed-navy">{viewRegModal.organisation}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Registered</p>
+                  <p className="text-[14px] text-nasmed-navy">{viewRegModal.date}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Dues Status</p>
+                  <p className="text-[14px] text-nasmed-navy">{viewRegModal.duesStatus}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Registration Fee</p>
+                  <p className="text-[14px] font-bold text-nasmed-navy">{viewRegModal.fee}</p>
+                </div>
+              </div>
+
+              {/* Payment info */}
+              <div className="bg-nasmed-off-white rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Payment Method</p>
+                  <p className="text-[14px] text-nasmed-navy">{viewRegModal.paymentMethod}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.5px] text-nasmed-text-muted mb-0.5">Payment Reference</p>
+                  <p className="text-[14px] font-mono text-nasmed-navy break-all">{viewRegModal.paymentRef}</p>
+                </div>
+              </div>
+
+              {/* Proof of payment */}
+              {viewRegModal.receiptUrl ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-[13px] font-bold text-nasmed-navy">Proof of Payment</p>
+                  {/\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(viewRegModal.receiptUrl) ? (
+                    <a href={viewRegModal.receiptUrl} target="_blank" rel="noopener noreferrer" className="block">
+                      <img
+                        src={viewRegModal.receiptUrl}
+                        alt="Payment receipt"
+                        className="w-full max-h-[340px] object-contain rounded-xl border border-nasmed-gray-light shadow-sm hover:shadow-md transition-shadow"
+                      />
+                      <p className="text-[12px] text-nasmed-mid-blue mt-1.5 text-center">Click image to open full size ↗</p>
+                    </a>
+                  ) : (
+                    <a
+                      href={viewRegModal.receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-4 bg-nasmed-off-white border border-nasmed-gray-light rounded-xl hover:bg-nasmed-mid-blue/5 transition-colors"
+                    >
+                      <span className="text-3xl">📄</span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-nasmed-navy">View Receipt Document</p>
+                        <p className="text-[12px] text-nasmed-mid-blue">Click to open in new tab ↗</p>
+                      </div>
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                  <span className="text-xl">⚠️</span>
+                  <p className="text-[13px] text-amber-700 font-medium">No proof of payment attached to this registration.</p>
+                </div>
+              )}
+
+              {/* ── Email Response Composer ── */}
+              <div className="border border-nasmed-gray-light rounded-xl overflow-hidden">
+                <div className="bg-nasmed-off-white px-4 py-3 border-b border-nasmed-gray-light">
+                  <p className="text-[13px] font-bold text-nasmed-navy">✉ Send Response to Registrant</p>
+                  <p className="text-[11px] text-nasmed-text-muted mt-0.5">Compose a custom message or use a quick template. This will open your email client with the message pre-filled.</p>
+                </div>
+                <div className="p-4 flex flex-col gap-3">
+                  {/* Quick template buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setRegReplyText(regEmailTemplates.missingReceipt(viewRegModal))}
+                      className="py-1.5 px-3 rounded-lg border-[1.5px] border-amber-400 text-amber-700 bg-amber-50 text-[11px] font-semibold cursor-pointer hover:bg-amber-100 transition-colors"
+                    >⚠ Missing Proof of Payment</button>
+                    <button
+                      type="button"
+                      onClick={() => setRegReplyText(regEmailTemplates.notApproved(viewRegModal))}
+                      className="py-1.5 px-3 rounded-lg border-[1.5px] border-red-300 text-red-700 bg-red-50 text-[11px] font-semibold cursor-pointer hover:bg-red-100 transition-colors"
+                    >✗ Registration Not Approved</button>
+                    <button
+                      type="button"
+                      onClick={() => setRegReplyText(regEmailTemplates.approved(viewRegModal))}
+                      className="py-1.5 px-3 rounded-lg border-[1.5px] border-nasmed-green/50 text-nasmed-green bg-nasmed-green/5 text-[11px] font-semibold cursor-pointer hover:bg-nasmed-green/10 transition-colors"
+                    >✓ Registration Approved</button>
+                    <button
+                      type="button"
+                      onClick={() => setRegReplyText(regEmailTemplates.followUp(viewRegModal))}
+                      className="py-1.5 px-3 rounded-lg border-[1.5px] border-nasmed-mid-blue/40 text-nasmed-mid-blue bg-nasmed-mid-blue/5 text-[11px] font-semibold cursor-pointer hover:bg-nasmed-mid-blue/10 transition-colors"
+                    >↩ General Follow-up</button>
+                    {regReplyText && (
+                      <button
+                        type="button"
+                        onClick={() => setRegReplyText("")}
+                        className="py-1.5 px-3 rounded-lg border-[1.5px] border-nasmed-gray-light text-nasmed-text-muted bg-white text-[11px] font-semibold cursor-pointer hover:border-red-300 hover:text-red-500 transition-colors"
+                      >✕ Clear</button>
+                    )}
+                  </div>
+
+                  {/* Compose area */}
+                  <textarea
+                    value={regReplyText}
+                    onChange={e => setRegReplyText(e.target.value)}
+                    rows={6}
+                    placeholder="Type your message here, or click a template above to pre-fill…"
+                    className="w-full py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-[13px] text-nasmed-navy outline-none focus:border-nasmed-mid-blue resize-y leading-relaxed"
+                  />
+
+                  {/* Send button */}
+                  <a
+                    href={regReplyText.trim() ? `mailto:${viewRegModal.email}?subject=${encodeURIComponent(`NASMED Event Registration — ${viewRegModal.eventTitle}`)}&body=${encodeURIComponent(regReplyText)}` : "#"}
+                    onClick={e => { if (!regReplyText.trim()) { e.preventDefault(); toast.error("Please type a message before sending."); } }}
+                    className={`flex items-center justify-center gap-2 py-2.5 px-5 rounded-lg text-[13px] font-semibold no-underline transition-all ${regReplyText.trim() ? "bg-nasmed-mid-blue text-white hover:opacity-85 cursor-pointer" : "bg-nasmed-gray-light text-nasmed-text-muted cursor-not-allowed"}`}
+                  >
+                    ✉ Send Email to {viewRegModal.name}
+                  </a>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-1">
+                {viewRegModal.status === "pending" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await eventRegistrationService.updateStatus(viewRegModal.id, "confirmed");
+                        setEventRegistrations(prev => prev.map(x => x.id === viewRegModal.id ? { ...x, status: "confirmed" } : x));
+                        setViewRegModal(prev => prev ? { ...prev, status: "confirmed" } : null);
+                        toast.success(`Registration confirmed for ${viewRegModal.name}`);
+                      }}
+                      className="flex-1 bg-nasmed-green text-white border-none py-2.5 rounded-lg text-[14px] font-bold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                    >✓ Confirm Registration</button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await eventRegistrationService.updateStatus(viewRegModal.id, "cancelled");
+                        setEventRegistrations(prev => prev.map(x => x.id === viewRegModal.id ? { ...x, status: "cancelled" } : x));
+                        setViewRegModal(prev => prev ? { ...prev, status: "cancelled" } : null);
+                        toast.success(`Registration cancelled for ${viewRegModal.name}`);
+                      }}
+                      className="bg-red-500 text-white border-none py-2.5 px-5 rounded-lg text-[14px] font-bold cursor-pointer hover:bg-red-600 transition-all"
+                    >✗ Cancel</button>
+                  </>
+                )}
+                {viewRegModal.status !== "pending" && (
+                  <button
+                    type="button"
+                    onClick={() => setViewRegModal(null)}
+                    className="flex-1 py-2.5 rounded-lg border border-nasmed-gray-light text-nasmed-navy text-[14px] font-semibold bg-white cursor-pointer hover:bg-nasmed-off-white"
+                  >Close</button>
+                )}
+              </div>
             </div>
           </div>
         </div>
