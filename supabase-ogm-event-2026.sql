@@ -1,63 +1,120 @@
 -- NASMED CME Series & OGM 2026 — Event Setup
 -- Run this in the Supabase SQL editor (PostgreSQL)
 
--- Ensure registration_fee and body_content columns exist
+-- Ensure registration_fee, body_content, and flier_url columns exist
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS registration_fee INTEGER DEFAULT 0;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS body_content TEXT;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS flier_url TEXT;
 
 -- Remove any previous version of this event (safe to re-run)
-DELETE FROM public.events WHERE title = 'NASMED CME Series & Ordinary General Meeting (OGM)';
+DELETE FROM public.events WHERE title = 'NASMED CME Series & Ordinary General Meeting (OGM)'
+   OR title = 'NASMED CME Series & OGM — Webinar Q2 2026';
 
 -- Insert the event
 INSERT INTO public.events (
   title, description, location, event_date,
   day_label, month_label, cta_text, cta_style,
-  registration_fee, body_content, published
+  registration_fee, body_content, flier_url, published
 ) VALUES (
-  'NASMED CME Series & Ordinary General Meeting (OGM)',
-  'In commemoration of the 2nd Anniversary of the current EXCO — featuring CME presentations on Paralympic Classification and Athlete Health Innovation. Theme: Strengthening Sports Medicine Practice for Better Athlete Health & Performance.',
-  'Zoom, Virtual / Online Platform',
+  'NASMED CME Series & OGM — Webinar Q2 2026',
+  'The Continuing Medical Education (CME) Series & Ordinary General Meeting (OGM) in commemoration of the 2nd Anniversary of the current EXCO. Featuring presentations on Paralympic Athletes'' Classification Journey and Advancing Athlete Health through Sports Medicine Innovation.',
+  'Virtual (Zoom)',
   '2026-06-19',
   '19',
   'JUN',
   'Register Now',
   'filled',
   10000,
-  'NASMED Continuing Medical Education (CME) Series & Ordinary General Meeting (OGM)
-Theme: Strengthening Sports Medicine Practice for Better Athlete Health & Performance
-Nigeria Association of Sports Medicine (NASMED)
-Date: Friday, 19th June 2026
-Venue: Zoom, Virtual / Online Platform
+  'Nigeria Association of Sports Medicine (NASMED)
 
-INTRODUCTION
-The Nigeria Association of Sports Medicine (NASMED) is pleased to announce its CME Series and OGM in commemoration of the 2nd Year Anniversary of the current Executive Committee (EXCO). This event will bring together professionals, researchers, practitioners, stakeholders, and members to discuss current developments, athlete healthcare, research advancements, policy development, and future opportunities within sports medicine and exercise science in Nigeria. The OGM will also feature the presentation of the NASMED Activity Report covering the period from 2024 to 2026.
+Present
+
+Continuing Medical Education (CME) Series & Ordinary General Meeting (OGM)
+(Webinar, Second Quarter 2026)
+
+Theme: Strengthening Sports Medicine Practice for Better Athlete Health & Performance
+
+Date: Friday, 19th June 2026
+Venue: Virtual (Zoom)
+Moderator: Dr. Olajide Adebola
+
+
+WELCOME ADDRESS
+
+The Nigeria Association of Sports Medicine (NASMED) welcomes members, professionals, researchers, practitioners, stakeholders, and invited guests to the Continuing Medical Education (CME) Series and Ordinary General Meeting (OGM).
+
+This event marks the second anniversary of the current Executive Committee (EXCO). It provides an opportunity to share knowledge, discuss emerging issues in sports medicine, and review the Association''s activities from 2024 to 2026.
+
+
+PROGRAMME OF EVENTS
+
+TIME                      ACTIVITY
+12:30 PM                  Registration & Participants Log-in
+12:45 PM                  Housekeeping rules
+1:00 PM                   Welcome Remarks by the Moderator
+1:05 PM                   Introduction of NASMED CME Series & OGM
+1:10 PM – 1:35 PM         Dr. Bakare Ummukulthoum (2nd Vice President)
+                          Topic: Paralympic Athletes'' Classification Journey
+1:35 PM – 2:00 PM         Dr. Obinnaya Francis Udigwu (Secretary General)
+                          Topic: From Preparation to Podium: Advancing Athlete Health, Performance and Well-being through Sports Medicine Innovation, Research and Collaboration
+2:00 PM – 2:30 PM         Interactive Questions & Answers Session
+2:30 PM – 3:30 PM         Ordinary General Meeting (OGM)
+2:35 PM                   Presentation of NASMED Activity Report (2024–2026)
+3:00 PM                   Strategic Discussions and Members'' Contributions
+3:20 PM                   Closing Remarks
+3:30 PM                   Adjournment
+
 
 OBJECTIVES
-- To celebrate the successful 2 years anniversary of the current EXCO.
+
 - To strengthen collaboration among members and stakeholders.
 - To discuss emerging trends in sports medicine and athlete care.
 - To promote research, education, and policy development.
 - To provide networking and professional engagement opportunities.
-- To present the NASMED Activity Report (2024 to 2026).
+- To present the NASMED Activity Report covering 2024–2026.
 
-CME PRESENTATIONS
-First Presenter (Vice President): Paralympic Athletes Classification Journey
-Second Presenter (Secretary General): From Preparation to Podium: Advancing Athlete Health, Performance and Well-being through Sports Medicine Innovation, Research and Collaboration
 
-PROGRAMME SCHEDULE
-12:30 PM             Registration
-1:00 PM              1st Presentation
-1:00 PM - 2:00 PM    CME Series Session
-2:00 PM - 2:30 PM    Questions and Answers
-2:30 PM - 3:30 PM    OGM and Presentation of Activity Report (2024-2026)
+PARTICIPATION INFORMATION
 
-PARTICIPATION
-- Members who have paid their dues will attend FREE.
-- Members yet to pay their dues will pay NGN 10,000.
+- Members who have paid their annual dues will attend FREE of charge.
+- Members yet to pay their dues and non-members will be required to pay a participation fee of ₦10,000 for the webinar only.
+
 
 EXPECTED PARTICIPANTS
-NASMED Members, Sports Medicine Practitioners, Physiotherapists, Medical Doctors, Researchers and Academics, Sports Scientists, Allied Health Professionals, Students and Stakeholders.
 
-Signed: Secretary General, Nigeria Association of Sports Medicine (NASMED)',
+- NASMED Members
+- Sports Medicine Practitioners
+- Physiotherapists
+- Medical Doctors
+- Researchers and Academics
+- Sports Scientists
+- Allied Health Professionals
+- Students
+- Stakeholders in Sports and Exercise Medicine
+
+
+We look forward to your participation.
+
+NASMED Secretariat',
+  '/webinar%202026.jpeg',
+  true
+);
+
+-- ── News post announcement (shows in the News grid with flier) ──
+-- Remove any previous version of this post (safe to re-run)
+DELETE FROM public.news_posts WHERE title = 'NASMED CME Series & Ordinary General Meeting (OGM)'
+   OR title = 'NASMED CME Series & OGM — Webinar Q2 2026';
+
+INSERT INTO public.news_posts (
+  title, description, category, category_label,
+  date_label, read_time, image_url, published
+) VALUES (
+  'NASMED CME Series & OGM — Webinar Q2 2026',
+  'Nigeria Association of Sports Medicine (NASMED) presents the Continuing Medical Education (CME) Series & Ordinary General Meeting (OGM) for the Second Quarter of 2026. The webinar features presentations on Paralympic Athletes'' Classification Journey and Advancing Athlete Health through Sports Medicine Innovation. Date: Friday, 19th June 2026 | Venue: Virtual (Zoom). FREE for paid-up members · ₦10,000 for others.',
+  'conference',
+  'CONFERENCE',
+  'Jun 2026',
+  '2 min read',
+  '/webinar%202026.jpeg',
   true
 );

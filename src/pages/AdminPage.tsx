@@ -243,6 +243,8 @@ export default function AdminPage() {
   const [evCtaStyle, setEvCtaStyle] = useState<"filled" | "outline">("filled");
   const [evRegistrationFee, setEvRegistrationFee] = useState("0");
   const [evBodyContent, setEvBodyContent] = useState("");
+  const [evFlierFile, setEvFlierFile] = useState<File | null>(null);
+  const [evFlierPreview, setEvFlierPreview] = useState<string | null>(null);
 
   // Posters state
   const [posters, setPosters] = useState<Poster[]>([]);
@@ -300,6 +302,9 @@ export default function AdminPage() {
   const [eeCtaStyle, setEeCtaStyle] = useState<"filled" | "outline">("filled");
   const [eeFee, setEeFee] = useState("0");
   const [eeBody, setEeBody] = useState("");
+  const [eeFlierUrl, setEeFlierUrl] = useState("");
+  const [eeFlierFile, setEeFlierFile] = useState<File | null>(null);
+  const [eeFlierPreview, setEeFlierPreview] = useState<string | null>(null);
 
   const openEditEvent = (ev: NewsEvent) => {
     setEditEvent(ev);
@@ -311,6 +316,9 @@ export default function AdminPage() {
     setEeCtaStyle(ev.cta_style);
     setEeFee(String(ev.registration_fee || 0));
     setEeBody(ev.body_content || "");
+    setEeFlierUrl(ev.flier_url || "");
+    setEeFlierFile(null);
+    setEeFlierPreview(null);
   };
 
   const saveEditEvent = async () => {
@@ -318,6 +326,10 @@ export default function AdminPage() {
     if (!eeTitle.trim()) { toast.error("Title is required."); return; }
     const d = eeDate ? new Date(eeDate) : null;
     try {
+      let flierUrl = eeFlierUrl;
+      if (eeFlierFile) {
+        flierUrl = await newsService.uploadEventFlier(eeFlierFile);
+      }
       const updates: Partial<NewsEvent> = {
         title: eeTitle, description: eeDesc, location: eeLocation,
         event_date: eeDate || undefined,
@@ -326,6 +338,7 @@ export default function AdminPage() {
         cta_text: eeCtaText, cta_style: eeCtaStyle,
         registration_fee: Number(eeFee) || 0,
         body_content: eeBody || undefined,
+        flier_url: flierUrl || undefined,
       };
       await newsService.updateEvent(editEvent.id, updates);
       setNewsEvents(prev => prev.map(x => x.id === editEvent.id ? { ...x, ...updates } : x));
@@ -1318,6 +1331,30 @@ export default function AdminPage() {
                     <label className="text-[13px] font-semibold text-nasmed-navy">Full Event Content (body)</label>
                     <textarea rows={6} value={evBodyContent} onChange={e => setEvBodyContent(e.target.value)} placeholder="Paste full event announcement, programme schedule, etc." className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
                   </div>
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[13px] font-semibold text-nasmed-navy">Event Flier / Poster Image (optional)</label>
+                    <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${evFlierFile ? "border-nasmed-green bg-nasmed-green/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:bg-nasmed-off-white"}`}>
+                      <span className="text-xl">{evFlierFile ? "🖼️" : "📁"}</span>
+                      <div className="flex-1 min-w-0">
+                        {evFlierFile
+                          ? <><p className="text-sm font-semibold text-nasmed-navy truncate">{evFlierFile.name}</p><p className="text-xs text-nasmed-text-muted">{(evFlierFile.size / 1024).toFixed(0)} KB</p></>
+                          : <><p className="text-sm text-nasmed-text-muted">Click to upload event flier</p><p className="text-xs text-nasmed-text-muted">JPG, PNG, WEBP up to 10MB</p></>
+                        }
+                      </div>
+                      {evFlierFile && <button type="button" onClick={e => { e.preventDefault(); setEvFlierFile(null); setEvFlierPreview(null); }} className="text-red-400 hover:text-red-600 text-lg leading-none border-none bg-transparent cursor-pointer">✕</button>}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => {
+                        const f = e.target.files?.[0] || null;
+                        setEvFlierFile(f);
+                        if (f) { const r = new FileReader(); r.onload = ev => setEvFlierPreview(ev.target?.result as string); r.readAsDataURL(f); }
+                        else setEvFlierPreview(null);
+                      }} />
+                    </label>
+                    {evFlierPreview && (
+                      <div className="mt-2 rounded-lg overflow-hidden border border-nasmed-gray-light w-full max-w-[200px]">
+                        <img src={evFlierPreview} alt="Flier preview" className="w-full object-contain max-h-[280px]" />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -1325,6 +1362,10 @@ export default function AdminPage() {
                     if (!evTitle.trim()) { toast.error("Title is required."); return; }
                     const d = evDate ? new Date(evDate) : null;
                     try {
+                      let flierUrl: string | undefined;
+                      if (evFlierFile) {
+                        flierUrl = await newsService.uploadEventFlier(evFlierFile);
+                      }
                       const ev = await newsService.createEvent({
                         title: evTitle, description: evDesc, location: evLocation,
                         event_date: evDate || undefined,
@@ -1333,11 +1374,12 @@ export default function AdminPage() {
                         cta_text: evCtaText, cta_style: evCtaStyle,
                         registration_fee: Number(evRegistrationFee) || 0,
                         body_content: evBodyContent || undefined,
+                        flier_url: flierUrl,
                         published: true,
                       });
                       setNewsEvents(prev => [...prev, ev]);
                       setEvTitle(""); setEvDesc(""); setEvLocation(""); setEvDate(""); setEvCtaText("Register"); setEvCtaStyle("filled");
-                      setEvRegistrationFee("0"); setEvBodyContent("");
+                      setEvRegistrationFee("0"); setEvBodyContent(""); setEvFlierFile(null); setEvFlierPreview(null);
                       toast.success("Event created!");
                     } catch { toast.error("Failed to create event."); }
                   }}
@@ -2208,6 +2250,41 @@ export default function AdminPage() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-semibold text-nasmed-navy">Full Event Content (body)</label>
                 <textarea rows={5} value={eeBody} onChange={e => setEeBody(e.target.value)} className="py-2.5 px-3.5 border-[1.5px] border-nasmed-gray-light rounded-lg text-sm outline-none focus:border-nasmed-mid-blue resize-y" />
+              </div>
+
+              {/* Flier upload */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-semibold text-nasmed-navy">Event Flier / Poster Image</label>
+                {eeFlierUrl && !eeFlierFile && (
+                  <div className="flex items-start gap-3 p-3 bg-nasmed-off-white rounded-lg border border-nasmed-gray-light">
+                    <img src={eeFlierUrl} alt="Current flier" className="w-16 h-20 object-cover rounded-lg border border-nasmed-gray-light flex-shrink-0" />
+                    <div className="flex flex-col gap-1 flex-1">
+                      <p className="text-[12px] font-semibold text-nasmed-navy">Current flier</p>
+                      <button type="button" onClick={() => setEeFlierUrl("")} className="text-red-500 text-[12px] font-semibold bg-transparent border-none cursor-pointer text-left hover:text-red-700">Remove flier</button>
+                    </div>
+                  </div>
+                )}
+                <label className={`flex items-center gap-3 py-3 px-4 border-[1.5px] border-dashed rounded-lg cursor-pointer transition-all ${eeFlierFile ? "border-nasmed-green bg-nasmed-green/5" : "border-nasmed-gray-light hover:border-nasmed-mid-blue hover:bg-nasmed-off-white"}`}>
+                  <span className="text-xl">{eeFlierFile ? "🖼️" : "📁"}</span>
+                  <div className="flex-1 min-w-0">
+                    {eeFlierFile
+                      ? <><p className="text-sm font-semibold text-nasmed-navy truncate">{eeFlierFile.name}</p><p className="text-xs text-nasmed-text-muted">{(eeFlierFile.size / 1024).toFixed(0)} KB</p></>
+                      : <><p className="text-sm text-nasmed-text-muted">{eeFlierUrl ? "Upload new flier (replaces current)" : "Click to upload event flier"}</p><p className="text-xs text-nasmed-text-muted">JPG, PNG, WEBP up to 10MB</p></>
+                    }
+                  </div>
+                  {eeFlierFile && <button type="button" onClick={e => { e.preventDefault(); setEeFlierFile(null); setEeFlierPreview(null); }} className="text-red-400 hover:text-red-600 text-lg leading-none border-none bg-transparent cursor-pointer">✕</button>}
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    const f = e.target.files?.[0] || null;
+                    setEeFlierFile(f);
+                    if (f) { const r = new FileReader(); r.onload = ev => setEeFlierPreview(ev.target?.result as string); r.readAsDataURL(f); }
+                    else setEeFlierPreview(null);
+                  }} />
+                </label>
+                {eeFlierPreview && (
+                  <div className="mt-1 rounded-lg overflow-hidden border border-nasmed-gray-light w-full max-w-[180px]">
+                    <img src={eeFlierPreview} alt="New flier preview" className="w-full object-contain max-h-[240px]" />
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3 px-6 py-4 border-t border-nasmed-gray-light">

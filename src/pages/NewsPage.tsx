@@ -204,51 +204,7 @@ export default function NewsPage() {
     <div>
       <PageHeader breadcrumb="HOME / NEWS & EVENTS" title="News & Events" subtitle="Stay updated with the latest from NASMED — conferences, research, policy updates and professional development" />
 
-      {/* ── Featured Upcoming Event — immediately below page header ── */}
-      {(featuredEvent || loadingEvents) && (
-        <section className="px-6 md:px-12 max-w-[1280px] mx-auto pt-8 pb-2">
-          {loadingEvents ? (
-            <div className="bg-nasmed-off-white rounded-2xl h-44 animate-pulse" />
-          ) : featuredEvent && (
-            <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue rounded-2xl overflow-hidden">
-              <div className="p-8 md:p-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-center">
-                <div>
-                  <span className="inline-block bg-nasmed-green/25 text-nasmed-green-light text-[11px] font-bold tracking-[1.5px] uppercase py-1 px-3 rounded mb-4">📅 Upcoming Event</span>
-                  <h2 className="font-heading text-white text-[26px] mb-3">{featuredEvent.title}</h2>
-                  <p className="text-white/65 text-[15px] leading-relaxed mb-5">{featuredEvent.description}</p>
-                  <div className="flex gap-4 text-white/60 text-sm flex-wrap mb-6">
-                    <span>📍 {featuredEvent.location}</span>
-                    {featuredEvent.event_date && (
-                      <span>📅 {new Date(featuredEvent.event_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenModal(featuredEvent.id)}
-                    className="bg-nasmed-green text-white border-none py-3 px-6 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
-                  >
-                    Register Now →
-                  </button>
-                </div>
-                <div className="hidden md:flex flex-col gap-3 min-w-[140px]">
-                  <div className="border-2 border-nasmed-mid-blue rounded-xl p-4 text-center bg-nasmed-mid-blue/10">
-                    <div className="font-heading text-2xl font-bold text-white">FREE</div>
-                    <div className="text-white/60 text-xs mt-1">Paid-up Members</div>
-                  </div>
-                  {featuredEvent.registration_fee > 0 && (
-                    <div className="border border-white/20 rounded-xl p-4 text-center">
-                      <div className="font-heading text-2xl font-bold text-white">{formatFee(featuredEvent.registration_fee)}</div>
-                      <div className="text-white/60 text-xs mt-1">Non-dues-paying members</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ── Hero Featured News Banner ── */}
+      {/* ── Hero Featured News Banner — first below page header ── */}
       <section className="px-6 md:px-12 max-w-[1280px] mx-auto pt-8 pb-4">
         {featuredPost ? (
           <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue rounded-2xl overflow-hidden">
@@ -265,7 +221,10 @@ export default function NewsPage() {
                 </div>
               </div>
               <div className="hidden md:flex items-center justify-center bg-white/5 p-10">
-                <span className="text-8xl opacity-60">{categoryIcon[featuredPost.category] || "📰"}</span>
+                {featuredPost.image_url
+                  ? <img src={featuredPost.image_url} alt={featuredPost.title} className="w-full h-full object-cover" />
+                  : <span className="text-8xl opacity-60">{categoryIcon[featuredPost.category] || "📰"}</span>
+                }
               </div>
             </div>
           </div>
@@ -273,6 +232,83 @@ export default function NewsPage() {
           <div className="bg-nasmed-off-white rounded-2xl h-48 animate-pulse" />
         ) : null}
       </section>
+
+      {/* ── Featured Upcoming Event — full detail view ── */}
+      {(featuredEvent || loadingEvents) && (
+        <section id="featured-event" className="px-6 md:px-12 max-w-[1280px] mx-auto pt-4 pb-2">
+          {loadingEvents ? (
+            <div className="bg-nasmed-off-white rounded-2xl h-44 animate-pulse" />
+          ) : featuredEvent && (
+            <div className="bg-gradient-to-br from-nasmed-navy to-nasmed-mid-blue rounded-2xl overflow-hidden">
+              <div className="p-8 md:p-10">
+                <span className="inline-block bg-nasmed-green/25 text-nasmed-green-light text-[11px] font-bold tracking-[1.5px] uppercase py-1 px-3 rounded mb-4">📅 Upcoming Event</span>
+
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 mt-2">
+                  {/* Left: event details */}
+                  <div>
+                    <h2 className="font-heading text-white text-[26px] leading-tight mb-2">{featuredEvent.title}</h2>
+                    <p className="text-nasmed-green-light text-[12px] font-semibold uppercase tracking-[1.2px] mb-4">
+                      Theme: Strengthening Sports Medicine Practice for Better Athlete Health &amp; Performance
+                    </p>
+                    <p className="text-white/65 text-[15px] leading-relaxed mb-4">{featuredEvent.description}</p>
+
+                    <div className="flex gap-4 text-white/60 text-sm flex-wrap mb-5">
+                      <span>🌐 {featuredEvent.location}</span>
+                      {featuredEvent.event_date && (
+                        <span>📅 {new Date(featuredEvent.event_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                      )}
+                      <span>🕐 Starts 12:30 PM</span>
+                    </div>
+
+                    {/* Fee cards */}
+                    <div className="flex gap-3 flex-wrap mb-5">
+                      <div className="bg-nasmed-green/20 border border-nasmed-green/40 rounded-xl px-5 py-3 text-center">
+                        <div className="font-heading text-white text-[20px] font-bold">FREE</div>
+                        <div className="text-white/55 text-[11px] mt-0.5">Paid-up Members</div>
+                      </div>
+                      {featuredEvent.registration_fee > 0 && (
+                        <div className="bg-white/10 border border-white/20 rounded-xl px-5 py-3 text-center">
+                          <div className="font-heading text-white text-[20px] font-bold">{formatFee(featuredEvent.registration_fee)}</div>
+                          <div className="text-white/55 text-[11px] mt-0.5">Non-dues-paying members</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Full programme / body content */}
+                    {featuredEvent.body_content && (
+                      <div className="bg-white/8 border border-white/15 rounded-xl p-5 mb-6">
+                        <h3 className="text-nasmed-green-light text-[11px] font-bold tracking-[2px] uppercase mb-3">Event Programme & Details</h3>
+                        <div className="text-white/75 text-[13px] leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto pr-1">
+                          {featuredEvent.body_content}
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setOpenModal(featuredEvent.id)}
+                      className="bg-nasmed-green text-white border-none py-3 px-7 rounded-lg text-sm font-semibold cursor-pointer hover:bg-nasmed-green-light transition-all"
+                    >
+                      Register Now →
+                    </button>
+                  </div>
+
+                  {/* Right: flier image — pinned top-right, natural size */}
+                  {featuredEvent.flier_url && (
+                    <div className="flex justify-center lg:justify-end self-start">
+                      <img
+                        src={featuredEvent.flier_url}
+                        alt="Event Flier"
+                        className="w-full max-w-[320px] h-auto rounded-xl shadow-xl border border-white/15"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Filters + News Grid ── */}
       <section className="py-16 px-6 md:px-12 max-w-[1280px] mx-auto">
@@ -504,6 +540,13 @@ export default function NewsPage() {
                     <div className="text-nasmed-text-muted text-xs mt-1">Members yet to pay dues</div>
                   </div>
                 </div>
+
+                {/* Event flier */}
+                {ev.flier_url && (
+                  <div className="flex justify-center">
+                    <img src={ev.flier_url} alt="Event Flier" className="max-w-[220px] w-auto h-auto rounded-xl shadow-md border border-nasmed-gray-light" />
+                  </div>
+                )}
 
                 {/* Full event details */}
                 {ev.body_content && (

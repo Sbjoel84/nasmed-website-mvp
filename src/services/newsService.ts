@@ -26,6 +26,7 @@ export interface NewsEvent {
   cta_style: 'filled' | 'outline';
   registration_fee: number;
   body_content?: string;
+  flier_url?: string;
   published: boolean;
 }
 
@@ -186,6 +187,14 @@ export const newsService = {
       .channel('news-posts-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'news_posts' }, callback)
       .subscribe();
+  },
+
+  async uploadEventFlier(file: File): Promise<string> {
+    const fileName = `event-fliers/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from('posters').upload(fileName, file);
+    if (uploadError) throw uploadError;
+    const { data: { publicUrl } } = supabase.storage.from('posters').getPublicUrl(fileName);
+    return publicUrl;
   },
 
   subscribeToEventChanges(callback: (payload: unknown) => void) {

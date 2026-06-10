@@ -33,7 +33,7 @@ export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [liveNews, setLiveNews] = useState<NewsPost[]>([]);
-  const [upcomingEvent, setUpcomingEvent] = useState<NewsEvent | null>(null);
+  const [events, setEvents] = useState<NewsEvent[]>([]);
 
   const nextSlide = useCallback(() => {
     setActiveSlide((prev) => (prev + 1) % heroSlides.length);
@@ -58,7 +58,7 @@ export default function HomePage() {
       .catch(() => {});
 
     newsService.getAllEvents()
-      .then(evts => { if (evts.length > 0) setUpcomingEvent(evts[0]); })
+      .then(evts => setEvents(evts))
       .catch(() => {});
   }, []);
 
@@ -135,78 +135,115 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* UPCOMING EVENT BANNER */}
-      {upcomingEvent && (
+      {/* UPCOMING EVENTS SECTION */}
+      {events.length > 0 && (
         <section className="py-16 px-6 md:px-12 bg-gradient-to-br from-nasmed-navy via-[#0d2558] to-nasmed-mid-blue">
           <div className="max-w-[1280px] mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-center">
+
+            {/* Section heading */}
+            <div className="flex items-center justify-between mb-10">
               <div>
-                <div className="flex gap-2 flex-wrap mb-4">
-                  <span className="inline-flex items-center gap-1.5 bg-nasmed-green/20 border border-nasmed-green/35 text-nasmed-green-light py-1 px-3 rounded-full text-[11px] font-bold tracking-[1.5px] uppercase">
-                    <span className="text-[8px]" style={{ animation: 'pulse-dot 2s infinite' }}>●</span>
-                    Upcoming Event
-                  </span>
-                  <span className="bg-white/10 border border-white/20 text-white/70 py-1 px-3 rounded-full text-[11px] font-semibold tracking-wide uppercase">
-                    📹 {upcomingEvent.location}
-                  </span>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="block w-8 h-[2px] bg-nasmed-green" />
+                  <span className="text-[11px] font-bold tracking-[2px] uppercase text-nasmed-green-light">Events</span>
                 </div>
-
-                <h2
-                  className="font-heading text-white font-bold leading-tight mb-2"
-                  style={{ fontSize: 'clamp(22px, 3vw, 38px)' }}
-                >
-                  {upcomingEvent.title}
+                <h2 className="font-heading text-white font-bold leading-tight" style={{ fontSize: 'clamp(24px, 3vw, 36px)' }}>
+                  Upcoming Events
                 </h2>
-                <p className="text-nasmed-green-light text-[13px] font-semibold uppercase tracking-[1.2px] mb-4">
-                  Theme: Strengthening Sports Medicine Practice for Better Athlete Health &amp; Performance
-                </p>
-                <p className="text-white/70 text-[15px] leading-relaxed max-w-[640px] mb-6">
-                  {upcomingEvent.description}
-                </p>
-
-                <div className="flex flex-wrap gap-5 text-white/60 text-[14px] mb-8">
-                  {upcomingEvent.event_date && (
-                    <span className="flex items-center gap-1.5">
-                      📅 {new Date(upcomingEvent.event_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1.5">📍 {upcomingEvent.location}</span>
-                  <span className="flex items-center gap-1.5">🕐 Starts 12:30 PM</span>
-                </div>
-
-                <div className="flex gap-3 flex-wrap">
-                  <Link to="/news" className="btn-primary">Register Now →</Link>
-                  <Link to="/news" className="btn-outline-hero">View Full Details</Link>
-                </div>
               </div>
+              <Link to="/news#featured-event" className="text-nasmed-green-light text-[13px] font-semibold hover:text-white transition-colors hidden md:block">
+                View All &amp; Register →
+              </Link>
+            </div>
 
-              {/* Date + fee cards */}
-              <div className="flex flex-row lg:flex-col gap-3 lg:min-w-[160px]">
-                <div className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-5 text-center flex-1 lg:flex-none">
-                  <div className="text-nasmed-green-light text-[10px] font-bold tracking-[2px] uppercase mb-1">Date</div>
-                  <div className="font-heading text-white font-bold leading-none" style={{ fontSize: 'clamp(32px, 4vw, 46px)' }}>
-                    {upcomingEvent.day_label}
-                  </div>
-                  <div className="font-heading text-nasmed-green-light text-[18px] font-bold tracking-wide">
-                    {upcomingEvent.month_label}
-                  </div>
-                  <div className="text-white/40 text-[13px] mt-0.5">
-                    {upcomingEvent.event_date ? new Date(upcomingEvent.event_date).getFullYear() : ""}
-                  </div>
-                </div>
-                <div className="bg-nasmed-green/20 border border-nasmed-green/40 rounded-xl p-4 text-center flex-1 lg:flex-none">
-                  <div className="font-heading text-white text-[22px] font-bold">FREE</div>
-                  <div className="text-white/55 text-[11px] mt-0.5 leading-snug">Paid-up<br className="hidden lg:block" /> Members</div>
-                </div>
-                {upcomingEvent.registration_fee > 0 && (
-                  <div className="bg-white/8 border border-white/15 rounded-xl p-4 text-center flex-1 lg:flex-none">
-                    <div className="font-heading text-white text-[22px] font-bold">
-                      ₦{upcomingEvent.registration_fee.toLocaleString()}
+            {/* Featured event — first event, big card */}
+            {(() => {
+              const ev = events[0];
+              return (
+                <div className="bg-white/[0.07] border border-white/15 rounded-2xl p-7 md:p-9 mb-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
+                    <div>
+                      <div className="flex gap-2 flex-wrap mb-4">
+                        <span className="inline-flex items-center gap-1.5 bg-nasmed-green/20 border border-nasmed-green/35 text-nasmed-green-light py-1 px-3 rounded-full text-[11px] font-bold tracking-[1.5px] uppercase">
+                          <span className="text-[8px]" style={{ animation: 'pulse-dot 2s infinite' }}>●</span>
+                          Featured
+                        </span>
+                        <span className="bg-white/10 border border-white/20 text-white/70 py-1 px-3 rounded-full text-[11px] font-semibold tracking-wide">
+                          🌐 {ev.location}
+                        </span>
+                      </div>
+                      <h3 className="font-heading text-white font-bold leading-tight mb-3" style={{ fontSize: 'clamp(20px, 2.5vw, 30px)' }}>
+                        {ev.title}
+                      </h3>
+                      <p className="text-white/65 text-[14px] leading-relaxed max-w-[580px] mb-5">
+                        {ev.description}
+                      </p>
+                      <div className="flex flex-wrap gap-4 text-white/55 text-[13px] mb-6">
+                        {ev.event_date && (
+                          <span>📅 {new Date(ev.event_date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                        )}
+                        <span>📍 {ev.location}</span>
+                      </div>
+                      <div className="flex gap-3 flex-wrap">
+                        <Link to="/news#featured-event" className="btn-primary">Register Now →</Link>
+                        <Link to="/news#featured-event" className="btn-outline-hero">View Full Details</Link>
+                      </div>
                     </div>
-                    <div className="text-white/55 text-[11px] mt-0.5 leading-snug">Non-dues-<br className="hidden lg:block" />paying</div>
+                    <div className="flex flex-row lg:flex-col gap-3 lg:min-w-[150px]">
+                      <div className="bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-5 text-center flex-1 lg:flex-none">
+                        <div className="text-nasmed-green-light text-[10px] font-bold tracking-[2px] uppercase mb-1">Date</div>
+                        <div className="font-heading text-white font-bold text-[40px] leading-none">{ev.day_label}</div>
+                        <div className="font-heading text-nasmed-green-light text-[17px] font-bold tracking-wide">{ev.month_label}</div>
+                        <div className="text-white/40 text-[12px] mt-0.5">{ev.event_date ? new Date(ev.event_date).getFullYear() : ""}</div>
+                      </div>
+                      <div className="bg-nasmed-green/20 border border-nasmed-green/40 rounded-xl p-4 text-center flex-1 lg:flex-none">
+                        <div className="font-heading text-white text-[20px] font-bold">FREE</div>
+                        <div className="text-white/55 text-[11px] mt-0.5 leading-snug">Paid-up<br className="hidden lg:block" />Members</div>
+                      </div>
+                      {ev.registration_fee > 0 && (
+                        <div className="bg-white/8 border border-white/15 rounded-xl p-4 text-center flex-1 lg:flex-none">
+                          <div className="font-heading text-white text-[20px] font-bold">₦{ev.registration_fee.toLocaleString()}</div>
+                          <div className="text-white/55 text-[11px] mt-0.5 leading-snug">Non-dues-<br className="hidden lg:block" />paying</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
+              );
+            })()}
+
+            {/* Remaining events — compact list cards */}
+            {events.length > 1 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {events.slice(1).map(ev => (
+                  <div key={ev.id} className="bg-white/[0.05] border border-white/10 rounded-xl p-5 flex gap-4 items-start hover:bg-white/[0.09] transition-colors">
+                    <div className="flex-shrink-0 bg-white/10 border border-white/15 rounded-xl p-3 text-center min-w-[58px]">
+                      <div className="font-heading text-white font-bold text-[26px] leading-none">{ev.day_label}</div>
+                      <div className="text-nasmed-green-light text-[10px] font-bold tracking-wide mt-0.5">{ev.month_label}</div>
+                      <div className="text-white/35 text-[10px]">{ev.event_date ? new Date(ev.event_date).getFullYear() : ""}</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-heading text-white text-[15px] font-bold leading-snug mb-1">{ev.title}</h4>
+                      <p className="text-white/55 text-[12px] mb-2">📍 {ev.location}</p>
+                      <div className="flex gap-3 items-center flex-wrap">
+                        <span className="text-nasmed-green-light text-[12px] font-semibold">FREE for members</span>
+                        {ev.registration_fee > 0 && (
+                          <span className="text-white/45 text-[12px]">· ₦{ev.registration_fee.toLocaleString()} others</span>
+                        )}
+                        <Link to="/news#featured-event" className="text-[12px] font-semibold text-nasmed-green-light border border-nasmed-green/40 rounded-lg py-1 px-3 hover:bg-nasmed-green/20 transition-colors">
+                          Register →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+
+            <div className="mt-6 text-center md:hidden">
+              <Link to="/news#featured-event" className="text-nasmed-green-light text-[13px] font-semibold">
+                View All Events &amp; Register →
+              </Link>
             </div>
           </div>
         </section>
