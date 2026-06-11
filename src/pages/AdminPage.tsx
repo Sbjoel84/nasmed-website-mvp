@@ -1069,8 +1069,6 @@ export default function AdminPage() {
                         ))}
                       </tbody>
                     </table>
-                    </tbody>
-                    </table>
                     {eventRegistrations.length === 0 && (
                       <div className="text-center py-10 text-nasmed-text-muted text-[13px]">No event registrations yet.</div>
                     )}
