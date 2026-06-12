@@ -57,8 +57,8 @@ export default function Footer() {
           <h5 className="text-white text-[13px] font-semibold tracking-wide mb-4">Contact & Newsletter</h5>
           <ul className="list-none flex flex-col gap-2.5 mb-3.5">
             <li><a href="mailto:contact@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">contact@nasmed.ng</a></li>
-            <li><a href="mailto:President@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">President@nasmed.ng</a></li>
-            <li><a href="mailto:Secretary@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">Secretary@nasmed.ng</a></li>
+            <li><a href="mailto:president@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">president@nasmed.ng</a></li>
+            <li><a href="mailto:secretary@nasmed.ng" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">secretary@nasmed.ng</a></li>
             <li><a href="tel:+2347030751474" className="text-white/55 no-underline text-sm hover:text-nasmed-green-light transition-colors">+234 703 075 1474</a></li>
             <li><span className="text-sm">Abuja, FCT — Nigeria</span></li>
           </ul>

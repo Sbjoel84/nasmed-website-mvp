@@ -28,7 +28,7 @@ export default function ContactPage() {
 
             {[
               { icon: "📍", title: "Head Office", desc: "NASMED National Secretariat,\nAbuja, Federal Capital Territory, Nigeria" },
-              { icon: "📧", title: "Email", desc: "info@nasmed.org.ng\nsecretary@nasmed.org.ng\nregistration@nasmed.org.ng" },
+              { icon: "📧", title: "Email", desc: "contact@nasmed.ng\npresident@nasmed.ng\nsecretary@nasmed.ng" },
               { icon: "📞", title: "Phone", desc: "+234 802 325 3372\ +234 703 075 1474" },
               { icon: "🕐", title: "Office Hours", desc: "Monday – Friday: 9:00am – 5:00pm\nSaturday: 10:00am – 2:00pm" },
               { icon: "📍", title: "Head Office", desc: "Abuja FCT, Nigeria" },
