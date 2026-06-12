@@ -12,7 +12,7 @@ const lbl = "text-[13px] font-semibold text-nasmed-navy";
 
 const BANK = {
   bankName: "Union Bank",
-  accountName: "Nigerian Association of Sports Medicine",
+  accountName: "Nigeria Association of Sports Medicine",
   accountNumber: "0227297914",
 };
 

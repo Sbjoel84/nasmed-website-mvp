@@ -53,13 +53,13 @@ const otherPayments = [
 const BANK_ACCOUNTS = {
   NGN: {
     bankName: "Union Bank",
-    accountName: "Nigerian Association of Sports Medicine",
+    accountName: "Nigeria Association of Sports Medicine",
     accountNumber: "0227297914",
     sortCode: "055",
   },
   USD: {
     bankName: "Zenith Bank (Domiciliary)",
-    accountName: "Nigerian Association of Sports Medicine",
+    accountName: "Nigeria Association of Sports Medicine",
     accountNumber: "0000000000", // ← replace with actual USD account number
     swiftCode: "ZEIBNGLA",
     sortCode: "057",
